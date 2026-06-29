@@ -570,6 +570,53 @@
   .star-btn.starred { color: var(--star); }
   .star-btn.starred:hover { color: var(--star); }
  
+  /* Completed-state styling */
+  .match.completed { opacity: 0.55; }
+  .match.completed:hover { opacity: 0.85; background: var(--bg-2); }
+  .match.completed .match-teams { font-weight: 500; }
+  .match-score {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    padding: 0 7px;
+    margin: 0 2px;
+    background: var(--bg-3);
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+  .match-score .sep { color: var(--ink-mute); font-weight: 400; }
+  .winner { color: var(--pitch); font-weight: 700; }
+  [data-theme="dark"] .winner { color: var(--pitch-light); }
+  .section-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--line);
+    margin: 28px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-header:first-of-type { margin-top: 0; }
+  .section-header .sh-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .section-header.past .sh-dot { background: var(--ink-mute); }
+  .section-header .sh-count {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--ink-mute);
+    letter-spacing: 0.08em;
+  }
+ 
   /* Calendar popover */
   .cal-wrap { position: relative; display: inline-flex; }
   .cal-popover {
@@ -744,94 +791,94 @@ const FLAGS = {
  
 // All 104 matches. Times in ET (UTC-4 during DST). Channel = FOX or FS1.
 const matches = [
-  {i:0,iso:"2026-06-11T15:00:00-04:00",stage:"group",badge:"A",teams:["Mexico","South Africa"],venue:"Estadio Azteca, Mexico City",ch:"FOX"},
-  {i:1,iso:"2026-06-11T22:00:00-04:00",stage:"group",badge:"A",teams:["South Korea","Czechia"],venue:"Estadio Akron, Zapopan",ch:"FS1"},
-  {i:2,iso:"2026-06-12T15:00:00-04:00",stage:"group",badge:"B",teams:["Canada","Bosnia & Herzegovina"],venue:"BMO Field, Toronto",ch:"FOX"},
-  {i:3,iso:"2026-06-12T21:00:00-04:00",stage:"group",badge:"D",teams:["USA","Paraguay"],venue:"SoFi Stadium, Inglewood",ch:"FOX"},
-  {i:4,iso:"2026-06-13T15:00:00-04:00",stage:"group",badge:"B",teams:["Qatar","Switzerland"],venue:"Levi's Stadium, Santa Clara",ch:"FOX"},
-  {i:5,iso:"2026-06-13T18:00:00-04:00",stage:"group",badge:"C",teams:["Brazil","Morocco"],venue:"MetLife Stadium, NJ",ch:"FS1"},
-  {i:6,iso:"2026-06-13T21:00:00-04:00",stage:"group",badge:"C",teams:["Haiti","Scotland"],venue:"Gillette Stadium, Foxborough",ch:"FS1"},
-  {i:7,iso:"2026-06-14T00:00:00-04:00",stage:"group",badge:"D",teams:["Australia","Türkiye"],venue:"BC Place, Vancouver",ch:"FOX"},
-  {i:8,iso:"2026-06-14T13:00:00-04:00",stage:"group",badge:"E",teams:["Germany","Curaçao"],venue:"NRG Stadium, Houston",ch:"FOX"},
-  {i:9,iso:"2026-06-14T16:00:00-04:00",stage:"group",badge:"F",teams:["Netherlands","Japan"],venue:"AT&T Stadium, Arlington",ch:"FOX"},
-  {i:10,iso:"2026-06-14T19:00:00-04:00",stage:"group",badge:"E",teams:["Ivory Coast","Ecuador"],venue:"Lincoln Financial Field, Philadelphia",ch:"FS1"},
-  {i:11,iso:"2026-06-14T22:00:00-04:00",stage:"group",badge:"F",teams:["Sweden","Tunisia"],venue:"Estadio BBVA, Monterrey",ch:"FS1"},
-  {i:12,iso:"2026-06-15T12:00:00-04:00",stage:"group",badge:"H",teams:["Spain","Cape Verde"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX"},
-  {i:13,iso:"2026-06-15T15:00:00-04:00",stage:"group",badge:"G",teams:["Belgium","Egypt"],venue:"Lumen Field, Seattle",ch:"FOX"},
-  {i:14,iso:"2026-06-15T18:00:00-04:00",stage:"group",badge:"H",teams:["Saudi Arabia","Uruguay"],venue:"Hard Rock Stadium, Miami",ch:"FS1"},
-  {i:15,iso:"2026-06-15T21:00:00-04:00",stage:"group",badge:"G",teams:["Iran","New Zealand"],venue:"SoFi Stadium, Inglewood",ch:"FS1"},
-  {i:16,iso:"2026-06-16T15:00:00-04:00",stage:"group",badge:"I",teams:["France","Senegal"],venue:"MetLife Stadium, NJ",ch:"FOX"},
-  {i:17,iso:"2026-06-16T18:00:00-04:00",stage:"group",badge:"I",teams:["Iraq","Norway"],venue:"Gillette Stadium, Foxborough",ch:"FOX"},
-  {i:18,iso:"2026-06-16T21:00:00-04:00",stage:"group",badge:"J",teams:["Argentina","Algeria"],venue:"Arrowhead Stadium, Kansas City",ch:"FOX"},
-  {i:19,iso:"2026-06-17T00:00:00-04:00",stage:"group",badge:"J",teams:["Austria","Jordan"],venue:"Levi's Stadium, Santa Clara",ch:"FS1"},
-  {i:20,iso:"2026-06-17T13:00:00-04:00",stage:"group",badge:"K",teams:["Portugal","DR Congo"],venue:"NRG Stadium, Houston",ch:"FOX"},
-  {i:21,iso:"2026-06-17T16:00:00-04:00",stage:"group",badge:"L",teams:["England","Croatia"],venue:"AT&T Stadium, Arlington",ch:"FOX"},
-  {i:22,iso:"2026-06-17T19:00:00-04:00",stage:"group",badge:"L",teams:["Ghana","Panama"],venue:"BMO Field, Toronto",ch:"FS1"},
-  {i:23,iso:"2026-06-17T22:00:00-04:00",stage:"group",badge:"K",teams:["Uzbekistan","Colombia"],venue:"Estadio Azteca, Mexico City",ch:"FS1"},
-  {i:24,iso:"2026-06-18T12:00:00-04:00",stage:"group",badge:"A",teams:["Czechia","South Africa"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX"},
-  {i:25,iso:"2026-06-18T15:00:00-04:00",stage:"group",badge:"B",teams:["Switzerland","Bosnia & Herzegovina"],venue:"SoFi Stadium, Inglewood",ch:"FOX"},
-  {i:26,iso:"2026-06-18T18:00:00-04:00",stage:"group",badge:"B",teams:["Canada","Qatar"],venue:"BC Place, Vancouver",ch:"FS1"},
-  {i:27,iso:"2026-06-18T21:00:00-04:00",stage:"group",badge:"A",teams:["Mexico","South Korea"],venue:"Estadio Akron, Zapopan",ch:"FOX"},
-  {i:28,iso:"2026-06-19T15:00:00-04:00",stage:"group",badge:"D",teams:["USA","Australia"],venue:"Lumen Field, Seattle",ch:"FOX"},
-  {i:29,iso:"2026-06-19T18:00:00-04:00",stage:"group",badge:"C",teams:["Scotland","Morocco"],venue:"Gillette Stadium, Foxborough",ch:"FOX"},
-  {i:30,iso:"2026-06-19T20:30:00-04:00",stage:"group",badge:"C",teams:["Brazil","Haiti"],venue:"Lincoln Financial Field, Philadelphia",ch:"FOX"},
-  {i:31,iso:"2026-06-20T00:00:00-04:00",stage:"group",badge:"D",teams:["Türkiye","Paraguay"],venue:"Levi's Stadium, Santa Clara",ch:"FS1"},
-  {i:32,iso:"2026-06-20T13:00:00-04:00",stage:"group",badge:"F",teams:["Netherlands","Sweden"],venue:"NRG Stadium, Houston",ch:"FOX"},
-  {i:33,iso:"2026-06-20T16:00:00-04:00",stage:"group",badge:"E",teams:["Germany","Ivory Coast"],venue:"BMO Field, Toronto",ch:"FOX"},
-  {i:34,iso:"2026-06-20T20:00:00-04:00",stage:"group",badge:"E",teams:["Ecuador","Curaçao"],venue:"Arrowhead Stadium, Kansas City",ch:"FS1"},
-  {i:35,iso:"2026-06-21T00:00:00-04:00",stage:"group",badge:"F",teams:["Tunisia","Japan"],venue:"Estadio BBVA, Monterrey",ch:"FS1"},
-  {i:36,iso:"2026-06-21T12:00:00-04:00",stage:"group",badge:"H",teams:["Spain","Saudi Arabia"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX"},
-  {i:37,iso:"2026-06-21T15:00:00-04:00",stage:"group",badge:"G",teams:["Belgium","Iran"],venue:"SoFi Stadium, Inglewood",ch:"FS1"},
-  {i:38,iso:"2026-06-21T18:00:00-04:00",stage:"group",badge:"H",teams:["Uruguay","Cape Verde"],venue:"Hard Rock Stadium, Miami",ch:"FS1"},
-  {i:39,iso:"2026-06-21T21:00:00-04:00",stage:"group",badge:"G",teams:["New Zealand","Egypt"],venue:"BC Place, Vancouver",ch:"FS1"},
-  {i:40,iso:"2026-06-22T13:00:00-04:00",stage:"group",badge:"J",teams:["Argentina","Austria"],venue:"AT&T Stadium, Arlington",ch:"FOX"},
-  {i:41,iso:"2026-06-22T17:00:00-04:00",stage:"group",badge:"I",teams:["France","Iraq"],venue:"Lincoln Financial Field, Philadelphia",ch:"FOX"},
-  {i:42,iso:"2026-06-22T20:00:00-04:00",stage:"group",badge:"I",teams:["Norway","Senegal"],venue:"MetLife Stadium, NJ",ch:"FOX"},
-  {i:43,iso:"2026-06-22T23:00:00-04:00",stage:"group",badge:"J",teams:["Jordan","Algeria"],venue:"Levi's Stadium, Santa Clara",ch:"FS1"},
-  {i:44,iso:"2026-06-23T13:00:00-04:00",stage:"group",badge:"K",teams:["Portugal","Uzbekistan"],venue:"NRG Stadium, Houston",ch:"FOX"},
-  {i:45,iso:"2026-06-23T16:00:00-04:00",stage:"group",badge:"L",teams:["England","Ghana"],venue:"Gillette Stadium, Foxborough",ch:"FOX"},
-  {i:46,iso:"2026-06-23T19:00:00-04:00",stage:"group",badge:"L",teams:["Panama","Croatia"],venue:"BMO Field, Toronto",ch:"FOX"},
-  {i:47,iso:"2026-06-23T22:00:00-04:00",stage:"group",badge:"K",teams:["Colombia","DR Congo"],venue:"Estadio Akron, Zapopan",ch:"FS1"},
-  {i:48,iso:"2026-06-24T15:00:00-04:00",stage:"group",badge:"B",teams:["Switzerland","Canada"],venue:"BC Place, Vancouver",ch:"FOX"},
-  {i:49,iso:"2026-06-24T15:00:00-04:00",stage:"group",badge:"B",teams:["Bosnia & Herzegovina","Qatar"],venue:"Lumen Field, Seattle",ch:"FS1"},
-  {i:50,iso:"2026-06-24T18:00:00-04:00",stage:"group",badge:"C",teams:["Scotland","Brazil"],venue:"Hard Rock Stadium, Miami",ch:"FOX"},
-  {i:51,iso:"2026-06-24T18:00:00-04:00",stage:"group",badge:"C",teams:["Morocco","Haiti"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FS1"},
-  {i:52,iso:"2026-06-24T21:00:00-04:00",stage:"group",badge:"A",teams:["Czechia","Mexico"],venue:"Estadio Azteca, Mexico City",ch:"FOX"},
-  {i:53,iso:"2026-06-24T21:00:00-04:00",stage:"group",badge:"A",teams:["South Africa","South Korea"],venue:"Estadio BBVA, Monterrey",ch:"FS1"},
-  {i:54,iso:"2026-06-25T16:00:00-04:00",stage:"group",badge:"E",teams:["Curaçao","Ivory Coast"],venue:"Lincoln Financial Field, Philadelphia",ch:"FS1"},
-  {i:55,iso:"2026-06-25T16:00:00-04:00",stage:"group",badge:"E",teams:["Ecuador","Germany"],venue:"MetLife Stadium, NJ",ch:"FOX"},
-  {i:56,iso:"2026-06-25T19:00:00-04:00",stage:"group",badge:"F",teams:["Japan","Sweden"],venue:"AT&T Stadium, Arlington",ch:"FS1"},
-  {i:57,iso:"2026-06-25T19:00:00-04:00",stage:"group",badge:"F",teams:["Tunisia","Netherlands"],venue:"Arrowhead Stadium, Kansas City",ch:"FOX"},
-  {i:58,iso:"2026-06-25T22:00:00-04:00",stage:"group",badge:"D",teams:["Türkiye","USA"],venue:"SoFi Stadium, Inglewood",ch:"FOX"},
-  {i:59,iso:"2026-06-25T22:00:00-04:00",stage:"group",badge:"D",teams:["Paraguay","Australia"],venue:"Levi's Stadium, Santa Clara",ch:"FS1"},
-  {i:60,iso:"2026-06-26T15:00:00-04:00",stage:"group",badge:"I",teams:["Norway","France"],venue:"Gillette Stadium, Foxborough",ch:"FOX"},
-  {i:61,iso:"2026-06-26T15:00:00-04:00",stage:"group",badge:"I",teams:["Senegal","Iraq"],venue:"BMO Field, Toronto",ch:"FS1"},
-  {i:62,iso:"2026-06-26T20:00:00-04:00",stage:"group",badge:"H",teams:["Uruguay","Spain"],venue:"Estadio Akron, Zapopan",ch:"FOX"},
-  {i:63,iso:"2026-06-26T20:00:00-04:00",stage:"group",badge:"H",teams:["Cape Verde","Saudi Arabia"],venue:"NRG Stadium, Houston",ch:"FS1"},
-  {i:64,iso:"2026-06-26T23:00:00-04:00",stage:"group",badge:"G",teams:["New Zealand","Belgium"],venue:"BC Place, Vancouver",ch:"FOX"},
-  {i:65,iso:"2026-06-26T23:00:00-04:00",stage:"group",badge:"G",teams:["Egypt","Iran"],venue:"Lumen Field, Seattle",ch:"FS1"},
-  {i:66,iso:"2026-06-27T17:00:00-04:00",stage:"group",badge:"L",teams:["Panama","England"],venue:"MetLife Stadium, NJ",ch:"FOX"},
-  {i:67,iso:"2026-06-27T17:00:00-04:00",stage:"group",badge:"L",teams:["Croatia","Ghana"],venue:"Lincoln Financial Field, Philadelphia",ch:"FS1"},
-  {i:68,iso:"2026-06-27T19:30:00-04:00",stage:"group",badge:"K",teams:["Colombia","Portugal"],venue:"Hard Rock Stadium, Miami",ch:"FOX"},
-  {i:69,iso:"2026-06-27T19:30:00-04:00",stage:"group",badge:"K",teams:["DR Congo","Uzbekistan"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FS1"},
-  {i:70,iso:"2026-06-27T22:00:00-04:00",stage:"group",badge:"J",teams:["Jordan","Argentina"],venue:"AT&T Stadium, Arlington",ch:"FOX"},
-  {i:71,iso:"2026-06-27T22:00:00-04:00",stage:"group",badge:"J",teams:["Algeria","Austria"],venue:"Arrowhead Stadium, Kansas City",ch:"FS1"},
-  {i:72,iso:"2026-06-28T15:00:00-04:00",stage:"r32",badge:"R32",teams:["Runner-up A","Runner-up B"],venue:"SoFi Stadium, Inglewood",ch:"FOX"},
-  {i:73,iso:"2026-06-29T13:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner C","Runner-up F"],venue:"NRG Stadium, Houston",ch:"FOX"},
-  {i:74,iso:"2026-06-29T16:30:00-04:00",stage:"r32",badge:"R32",teams:["Winner E","Best 3rd"],venue:"Gillette Stadium, Foxborough",ch:"FOX"},
-  {i:75,iso:"2026-06-29T21:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner F","Runner-up C"],venue:"Estadio BBVA, Monterrey",ch:"FOX"},
-  {i:76,iso:"2026-06-30T13:00:00-04:00",stage:"r32",badge:"R32",teams:["Runner-up E","Runner-up I"],venue:"AT&T Stadium, Arlington",ch:"FOX"},
-  {i:77,iso:"2026-06-30T17:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner I","Best 3rd"],venue:"MetLife Stadium, NJ",ch:"FOX"},
-  {i:78,iso:"2026-06-30T21:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner A","Best 3rd"],venue:"Estadio Azteca, Mexico City",ch:"FOX"},
-  {i:79,iso:"2026-07-01T12:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner L","Best 3rd"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX"},
-  {i:80,iso:"2026-07-01T16:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner G","Best 3rd"],venue:"Lumen Field, Seattle",ch:"FS1"},
-  {i:81,iso:"2026-07-01T20:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner D","Best 3rd"],venue:"Levi's Stadium, Santa Clara",ch:"FOX"},
-  {i:82,iso:"2026-07-02T15:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner H","Runner-up J"],venue:"SoFi Stadium, Inglewood",ch:"FOX"},
-  {i:83,iso:"2026-07-02T19:00:00-04:00",stage:"r32",badge:"R32",teams:["Runner-up K","Runner-up L"],venue:"BMO Field, Toronto",ch:"FOX"},
-  {i:84,iso:"2026-07-02T23:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner B","Best 3rd"],venue:"BC Place, Vancouver",ch:"FS1"},
-  {i:85,iso:"2026-07-03T14:00:00-04:00",stage:"r32",badge:"R32",teams:["Runner-up D","Runner-up G"],venue:"AT&T Stadium, Arlington",ch:"FOX"},
-  {i:86,iso:"2026-07-03T18:00:00-04:00",stage:"r32",badge:"R32",teams:["Winner J","Runner-up H"],venue:"Hard Rock Stadium, Miami",ch:"FOX"},
-  {i:87,iso:"2026-07-03T21:30:00-04:00",stage:"r32",badge:"R32",teams:["Winner K","Best 3rd"],venue:"Arrowhead Stadium, Kansas City",ch:"FOX"},
+  {i:0,iso:"2026-06-11T15:00:00-04:00",stage:"group",badge:"A",teams:["Mexico","South Africa"],venue:"Estadio Azteca, Mexico City",ch:"FOX",score:"2-0"},
+  {i:1,iso:"2026-06-11T22:00:00-04:00",stage:"group",badge:"A",teams:["South Korea","Czechia"],venue:"Estadio Akron, Zapopan",ch:"FS1",score:"2-1"},
+  {i:2,iso:"2026-06-12T15:00:00-04:00",stage:"group",badge:"B",teams:["Canada","Bosnia & Herzegovina"],venue:"BMO Field, Toronto",ch:"FOX",score:"1-1"},
+  {i:3,iso:"2026-06-12T21:00:00-04:00",stage:"group",badge:"D",teams:["USA","Paraguay"],venue:"SoFi Stadium, Inglewood",ch:"FOX",score:"4-1"},
+  {i:4,iso:"2026-06-13T15:00:00-04:00",stage:"group",badge:"B",teams:["Qatar","Switzerland"],venue:"Levi's Stadium, Santa Clara",ch:"FOX",score:"1-1"},
+  {i:5,iso:"2026-06-13T18:00:00-04:00",stage:"group",badge:"C",teams:["Brazil","Morocco"],venue:"MetLife Stadium, NJ",ch:"FS1",score:"1-1"},
+  {i:6,iso:"2026-06-13T21:00:00-04:00",stage:"group",badge:"C",teams:["Haiti","Scotland"],venue:"Gillette Stadium, Foxborough",ch:"FS1",score:"0-1"},
+  {i:7,iso:"2026-06-14T00:00:00-04:00",stage:"group",badge:"D",teams:["Australia","Türkiye"],venue:"BC Place, Vancouver",ch:"FOX",score:"2-0"},
+  {i:8,iso:"2026-06-14T13:00:00-04:00",stage:"group",badge:"E",teams:["Germany","Curaçao"],venue:"NRG Stadium, Houston",ch:"FOX",score:"7-1"},
+  {i:9,iso:"2026-06-14T16:00:00-04:00",stage:"group",badge:"F",teams:["Netherlands","Japan"],venue:"AT&T Stadium, Arlington",ch:"FOX",score:"2-2"},
+  {i:10,iso:"2026-06-14T19:00:00-04:00",stage:"group",badge:"E",teams:["Ivory Coast","Ecuador"],venue:"Lincoln Financial Field, Philadelphia",ch:"FS1",score:"1-0"},
+  {i:11,iso:"2026-06-14T22:00:00-04:00",stage:"group",badge:"F",teams:["Sweden","Tunisia"],venue:"Estadio BBVA, Monterrey",ch:"FS1",score:"5-1"},
+  {i:12,iso:"2026-06-15T12:00:00-04:00",stage:"group",badge:"H",teams:["Spain","Cape Verde"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX",score:"0-0"},
+  {i:13,iso:"2026-06-15T15:00:00-04:00",stage:"group",badge:"G",teams:["Belgium","Egypt"],venue:"Lumen Field, Seattle",ch:"FOX",score:"1-1"},
+  {i:14,iso:"2026-06-15T18:00:00-04:00",stage:"group",badge:"H",teams:["Saudi Arabia","Uruguay"],venue:"Hard Rock Stadium, Miami",ch:"FS1",score:"1-1"},
+  {i:15,iso:"2026-06-15T21:00:00-04:00",stage:"group",badge:"G",teams:["Iran","New Zealand"],venue:"SoFi Stadium, Inglewood",ch:"FS1",score:"2-2"},
+  {i:16,iso:"2026-06-16T15:00:00-04:00",stage:"group",badge:"I",teams:["France","Senegal"],venue:"MetLife Stadium, NJ",ch:"FOX",score:"3-1"},
+  {i:17,iso:"2026-06-16T18:00:00-04:00",stage:"group",badge:"I",teams:["Iraq","Norway"],venue:"Gillette Stadium, Foxborough",ch:"FOX",score:"1-4"},
+  {i:18,iso:"2026-06-16T21:00:00-04:00",stage:"group",badge:"J",teams:["Argentina","Algeria"],venue:"Arrowhead Stadium, Kansas City",ch:"FOX",score:"3-0"},
+  {i:19,iso:"2026-06-17T00:00:00-04:00",stage:"group",badge:"J",teams:["Austria","Jordan"],venue:"Levi's Stadium, Santa Clara",ch:"FS1",score:"3-1"},
+  {i:20,iso:"2026-06-17T13:00:00-04:00",stage:"group",badge:"K",teams:["Portugal","DR Congo"],venue:"NRG Stadium, Houston",ch:"FOX",score:"1-1"},
+  {i:21,iso:"2026-06-17T16:00:00-04:00",stage:"group",badge:"L",teams:["England","Croatia"],venue:"AT&T Stadium, Arlington",ch:"FOX",score:"4-2"},
+  {i:22,iso:"2026-06-17T19:00:00-04:00",stage:"group",badge:"L",teams:["Ghana","Panama"],venue:"BMO Field, Toronto",ch:"FS1",score:"1-0"},
+  {i:23,iso:"2026-06-17T22:00:00-04:00",stage:"group",badge:"K",teams:["Uzbekistan","Colombia"],venue:"Estadio Azteca, Mexico City",ch:"FS1",score:"1-3"},
+  {i:24,iso:"2026-06-18T12:00:00-04:00",stage:"group",badge:"A",teams:["Czechia","South Africa"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX",score:"1-1"},
+  {i:25,iso:"2026-06-18T15:00:00-04:00",stage:"group",badge:"B",teams:["Switzerland","Bosnia & Herzegovina"],venue:"SoFi Stadium, Inglewood",ch:"FOX",score:"4-1"},
+  {i:26,iso:"2026-06-18T18:00:00-04:00",stage:"group",badge:"B",teams:["Canada","Qatar"],venue:"BC Place, Vancouver",ch:"FS1",score:"6-0"},
+  {i:27,iso:"2026-06-18T21:00:00-04:00",stage:"group",badge:"A",teams:["Mexico","South Korea"],venue:"Estadio Akron, Zapopan",ch:"FOX",score:"1-0"},
+  {i:28,iso:"2026-06-19T15:00:00-04:00",stage:"group",badge:"D",teams:["USA","Australia"],venue:"Lumen Field, Seattle",ch:"FOX",score:"2-0"},
+  {i:29,iso:"2026-06-19T18:00:00-04:00",stage:"group",badge:"C",teams:["Scotland","Morocco"],venue:"Gillette Stadium, Foxborough",ch:"FOX",score:"0-1"},
+  {i:30,iso:"2026-06-19T20:30:00-04:00",stage:"group",badge:"C",teams:["Brazil","Haiti"],venue:"Lincoln Financial Field, Philadelphia",ch:"FOX",score:"3-0"},
+  {i:31,iso:"2026-06-20T00:00:00-04:00",stage:"group",badge:"D",teams:["Türkiye","Paraguay"],venue:"Levi's Stadium, Santa Clara",ch:"FS1",score:"0-1"},
+  {i:32,iso:"2026-06-20T13:00:00-04:00",stage:"group",badge:"F",teams:["Netherlands","Sweden"],venue:"NRG Stadium, Houston",ch:"FOX",score:"5-1"},
+  {i:33,iso:"2026-06-20T16:00:00-04:00",stage:"group",badge:"E",teams:["Germany","Ivory Coast"],venue:"BMO Field, Toronto",ch:"FOX",score:"2-1"},
+  {i:34,iso:"2026-06-20T20:00:00-04:00",stage:"group",badge:"E",teams:["Ecuador","Curaçao"],venue:"Arrowhead Stadium, Kansas City",ch:"FS1",score:"0-0"},
+  {i:35,iso:"2026-06-21T00:00:00-04:00",stage:"group",badge:"F",teams:["Tunisia","Japan"],venue:"Estadio BBVA, Monterrey",ch:"FS1",score:"0-4"},
+  {i:36,iso:"2026-06-21T12:00:00-04:00",stage:"group",badge:"H",teams:["Spain","Saudi Arabia"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX",score:"4-0"},
+  {i:37,iso:"2026-06-21T15:00:00-04:00",stage:"group",badge:"G",teams:["Belgium","Iran"],venue:"SoFi Stadium, Inglewood",ch:"FS1",score:"0-0"},
+  {i:38,iso:"2026-06-21T18:00:00-04:00",stage:"group",badge:"H",teams:["Uruguay","Cape Verde"],venue:"Hard Rock Stadium, Miami",ch:"FS1",score:"2-2"},
+  {i:39,iso:"2026-06-21T21:00:00-04:00",stage:"group",badge:"G",teams:["New Zealand","Egypt"],venue:"BC Place, Vancouver",ch:"FS1",score:"1-3"},
+  {i:40,iso:"2026-06-22T13:00:00-04:00",stage:"group",badge:"J",teams:["Argentina","Austria"],venue:"AT&T Stadium, Arlington",ch:"FOX",score:"1-0"},
+  {i:41,iso:"2026-06-22T17:00:00-04:00",stage:"group",badge:"I",teams:["France","Iraq"],venue:"Lincoln Financial Field, Philadelphia",ch:"FOX",score:"3-0"},
+  {i:42,iso:"2026-06-22T20:00:00-04:00",stage:"group",badge:"I",teams:["Norway","Senegal"],venue:"MetLife Stadium, NJ",ch:"FOX",score:"3-2"},
+  {i:43,iso:"2026-06-22T23:00:00-04:00",stage:"group",badge:"J",teams:["Jordan","Algeria"],venue:"Levi's Stadium, Santa Clara",ch:"FS1",score:"1-2"},
+  {i:44,iso:"2026-06-23T13:00:00-04:00",stage:"group",badge:"K",teams:["Portugal","Uzbekistan"],venue:"NRG Stadium, Houston",ch:"FOX",score:"5-0"},
+  {i:45,iso:"2026-06-23T16:00:00-04:00",stage:"group",badge:"L",teams:["England","Ghana"],venue:"Gillette Stadium, Foxborough",ch:"FOX",score:"0-0"},
+  {i:46,iso:"2026-06-23T19:00:00-04:00",stage:"group",badge:"L",teams:["Panama","Croatia"],venue:"BMO Field, Toronto",ch:"FOX",score:"0-1"},
+  {i:47,iso:"2026-06-23T22:00:00-04:00",stage:"group",badge:"K",teams:["Colombia","DR Congo"],venue:"Estadio Akron, Zapopan",ch:"FS1",score:"1-0"},
+  {i:48,iso:"2026-06-24T15:00:00-04:00",stage:"group",badge:"B",teams:["Switzerland","Canada"],venue:"BC Place, Vancouver",ch:"FOX",score:"2-1"},
+  {i:49,iso:"2026-06-24T15:00:00-04:00",stage:"group",badge:"B",teams:["Bosnia & Herzegovina","Qatar"],venue:"Lumen Field, Seattle",ch:"FS1",score:"3-1"},
+  {i:50,iso:"2026-06-24T18:00:00-04:00",stage:"group",badge:"C",teams:["Scotland","Brazil"],venue:"Hard Rock Stadium, Miami",ch:"FOX",score:"0-3"},
+  {i:51,iso:"2026-06-24T18:00:00-04:00",stage:"group",badge:"C",teams:["Morocco","Haiti"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FS1",score:"4-2"},
+  {i:52,iso:"2026-06-24T21:00:00-04:00",stage:"group",badge:"A",teams:["Czechia","Mexico"],venue:"Estadio Azteca, Mexico City",ch:"FOX",score:"0-3"},
+  {i:53,iso:"2026-06-24T21:00:00-04:00",stage:"group",badge:"A",teams:["South Africa","South Korea"],venue:"Estadio BBVA, Monterrey",ch:"FS1",score:"1-0"},
+  {i:54,iso:"2026-06-25T16:00:00-04:00",stage:"group",badge:"E",teams:["Curaçao","Ivory Coast"],venue:"Lincoln Financial Field, Philadelphia",ch:"FS1",score:"0-2"},
+  {i:55,iso:"2026-06-25T16:00:00-04:00",stage:"group",badge:"E",teams:["Ecuador","Germany"],venue:"MetLife Stadium, NJ",ch:"FOX",score:"2-1"},
+  {i:56,iso:"2026-06-25T19:00:00-04:00",stage:"group",badge:"F",teams:["Japan","Sweden"],venue:"AT&T Stadium, Arlington",ch:"FS1",score:"1-1"},
+  {i:57,iso:"2026-06-25T19:00:00-04:00",stage:"group",badge:"F",teams:["Tunisia","Netherlands"],venue:"Arrowhead Stadium, Kansas City",ch:"FOX",score:"1-3"},
+  {i:58,iso:"2026-06-25T22:00:00-04:00",stage:"group",badge:"D",teams:["Türkiye","USA"],venue:"SoFi Stadium, Inglewood",ch:"FOX",score:"3-2"},
+  {i:59,iso:"2026-06-25T22:00:00-04:00",stage:"group",badge:"D",teams:["Paraguay","Australia"],venue:"Levi's Stadium, Santa Clara",ch:"FS1",score:"0-0"},
+  {i:60,iso:"2026-06-26T15:00:00-04:00",stage:"group",badge:"I",teams:["Norway","France"],venue:"Gillette Stadium, Foxborough",ch:"FOX",score:"1-4"},
+  {i:61,iso:"2026-06-26T15:00:00-04:00",stage:"group",badge:"I",teams:["Senegal","Iraq"],venue:"BMO Field, Toronto",ch:"FS1",score:"5-0"},
+  {i:62,iso:"2026-06-26T20:00:00-04:00",stage:"group",badge:"H",teams:["Uruguay","Spain"],venue:"Estadio Akron, Zapopan",ch:"FOX",score:"0-1"},
+  {i:63,iso:"2026-06-26T20:00:00-04:00",stage:"group",badge:"H",teams:["Cape Verde","Saudi Arabia"],venue:"NRG Stadium, Houston",ch:"FS1",score:"0-0"},
+  {i:64,iso:"2026-06-26T23:00:00-04:00",stage:"group",badge:"G",teams:["New Zealand","Belgium"],venue:"BC Place, Vancouver",ch:"FOX",score:"1-5"},
+  {i:65,iso:"2026-06-26T23:00:00-04:00",stage:"group",badge:"G",teams:["Egypt","Iran"],venue:"Lumen Field, Seattle",ch:"FS1",score:"1-1"},
+  {i:66,iso:"2026-06-27T17:00:00-04:00",stage:"group",badge:"L",teams:["Panama","England"],venue:"MetLife Stadium, NJ",ch:"FOX",score:"0-2"},
+  {i:67,iso:"2026-06-27T17:00:00-04:00",stage:"group",badge:"L",teams:["Croatia","Ghana"],venue:"Lincoln Financial Field, Philadelphia",ch:"FS1",score:"2-1"},
+  {i:68,iso:"2026-06-27T19:30:00-04:00",stage:"group",badge:"K",teams:["Colombia","Portugal"],venue:"Hard Rock Stadium, Miami",ch:"FOX",score:"0-0"},
+  {i:69,iso:"2026-06-27T19:30:00-04:00",stage:"group",badge:"K",teams:["DR Congo","Uzbekistan"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FS1",score:"3-1"},
+  {i:70,iso:"2026-06-27T22:00:00-04:00",stage:"group",badge:"J",teams:["Jordan","Argentina"],venue:"AT&T Stadium, Arlington",ch:"FOX",score:"3-3"},
+  {i:71,iso:"2026-06-27T22:00:00-04:00",stage:"group",badge:"J",teams:["Algeria","Austria"],venue:"Arrowhead Stadium, Kansas City",ch:"FS1",score:"3-3"},
+  {i:72,iso:"2026-06-28T15:00:00-04:00",stage:"r32",badge:"R32",teams:["Canada","South Africa"],venue:"SoFi Stadium, Inglewood",ch:"FOX"},
+  {i:73,iso:"2026-06-29T13:00:00-04:00",stage:"r32",badge:"R32",teams:["Brazil","Japan"],venue:"NRG Stadium, Houston",ch:"FOX"},
+  {i:74,iso:"2026-06-29T16:30:00-04:00",stage:"r32",badge:"R32",teams:["Germany","Paraguay"],venue:"Gillette Stadium, Foxborough",ch:"FOX"},
+  {i:75,iso:"2026-06-29T21:00:00-04:00",stage:"r32",badge:"R32",teams:["Netherlands","Morocco"],venue:"Estadio BBVA, Monterrey",ch:"FOX"},
+  {i:76,iso:"2026-06-30T13:00:00-04:00",stage:"r32",badge:"R32",teams:["Ivory Coast","Norway"],venue:"AT&T Stadium, Arlington",ch:"FOX"},
+  {i:77,iso:"2026-06-30T17:00:00-04:00",stage:"r32",badge:"R32",teams:["France","Sweden"],venue:"MetLife Stadium, NJ",ch:"FOX"},
+  {i:78,iso:"2026-06-30T21:00:00-04:00",stage:"r32",badge:"R32",teams:["Mexico","Ecuador"],venue:"Estadio Azteca, Mexico City",ch:"FOX"},
+  {i:79,iso:"2026-07-01T12:00:00-04:00",stage:"r32",badge:"R32",teams:["England","DR Congo"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX"},
+  {i:80,iso:"2026-07-01T16:00:00-04:00",stage:"r32",badge:"R32",teams:["Belgium","Senegal"],venue:"Lumen Field, Seattle",ch:"FS1"},
+  {i:81,iso:"2026-07-01T20:00:00-04:00",stage:"r32",badge:"R32",teams:["USA","Bosnia & Herzegovina"],venue:"Levi's Stadium, Santa Clara",ch:"FOX"},
+  {i:82,iso:"2026-07-02T15:00:00-04:00",stage:"r32",badge:"R32",teams:["Spain","Austria"],venue:"SoFi Stadium, Inglewood",ch:"FOX"},
+  {i:83,iso:"2026-07-02T19:00:00-04:00",stage:"r32",badge:"R32",teams:["Portugal","Croatia"],venue:"BMO Field, Toronto",ch:"FOX"},
+  {i:84,iso:"2026-07-02T23:00:00-04:00",stage:"r32",badge:"R32",teams:["Switzerland","Algeria"],venue:"BC Place, Vancouver",ch:"FS1"},
+  {i:85,iso:"2026-07-03T14:00:00-04:00",stage:"r32",badge:"R32",teams:["Australia","Egypt"],venue:"AT&T Stadium, Arlington",ch:"FOX"},
+  {i:86,iso:"2026-07-03T18:00:00-04:00",stage:"r32",badge:"R32",teams:["Argentina","Cape Verde"],venue:"Hard Rock Stadium, Miami",ch:"FOX"},
+  {i:87,iso:"2026-07-03T21:30:00-04:00",stage:"r32",badge:"R32",teams:["Colombia","Ghana"],venue:"Arrowhead Stadium, Kansas City",ch:"FOX"},
   {i:88,iso:"2026-07-04T13:00:00-04:00",stage:"r16",badge:"R16",teams:["R32-73 W","R32-75 W"],venue:"NRG Stadium, Houston",ch:"FOX"},
   {i:89,iso:"2026-07-04T17:00:00-04:00",stage:"r16",badge:"R16",teams:["R32-74 W","R32-77 W"],venue:"Lincoln Financial Field, Philadelphia",ch:"FOX"},
   {i:90,iso:"2026-07-05T16:00:00-04:00",stage:"r16",badge:"R16",teams:["R32-76 W","R32-78 W"],venue:"MetLife Stadium, NJ",ch:"FOX"},
@@ -1087,9 +1134,10 @@ function renderNow() {
   const now = new Date();
   const tz = resolvedTz();
  
-  // Find current live match (kicked off within last 2.5h) or next match
+  // Find current live match (kicked off within last 2.5h, no score yet) or next match
   let live = null, next = null;
   for (const m of matches) {
+    if (m.score) continue;  // already played, skip
     const start = new Date(m.iso);
     const elapsedMs = now - start;
     if (elapsedMs >= 0 && elapsedMs < 2.5 * 3600 * 1000) {
@@ -1166,97 +1214,148 @@ window.starNext = (idx) => {
 function render() {
   const tz = resolvedTz();
   const sourceTz = 'America/New_York';
+  const now = new Date();
  
   const filtered = matches.filter(m => {
     if (state.stage === 'starred') { if (!state.starred.has(m.i)) return false; }
     else if (state.stage !== 'all') { if (m.stage !== state.stage) return false; }
     if (state.search) {
       const q = state.search.toLowerCase();
-      const hay = (m.teams.join(' ') + ' ' + m.venue + ' ' + m.badge + ' ' + m.ch).toLowerCase();
+      const hay = (m.teams.join(' ') + ' ' + m.venue + ' ' + m.badge + ' ' + m.ch + ' ' + (m.score || '')).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   });
  
-  const byDay = new Map();
+  // Split into upcoming and past based on either having a score (definitively completed)
+  // or kickoff being in the past
+  const upcoming = [];
+  const past = [];
   filtered.forEach(m => {
-    const d = new Date(m.iso);
-    const parts = getDayParts(d, tz);
-    if (!byDay.has(parts.key)) byDay.set(parts.key, { parts, items: [] });
-    byDay.get(parts.key).items.push({ ...m, date: d });
+    const start = new Date(m.iso);
+    const completed = m.score || start < now;
+    (completed ? past : upcoming).push(m);
   });
-  byDay.forEach(g => g.items.sort((a, b) => a.date - b.date));
-  const days = [...byDay.values()].sort((a, b) => a.items[0].date - b.items[0].date);
+ 
+  // Group each section by day
+  function groupByDay(list, ascending) {
+    const byDay = new Map();
+    list.forEach(m => {
+      const d = new Date(m.iso);
+      const parts = getDayParts(d, tz);
+      if (!byDay.has(parts.key)) byDay.set(parts.key, { parts, items: [] });
+      byDay.get(parts.key).items.push({ ...m, date: d });
+    });
+    byDay.forEach(g => g.items.sort((a, b) => a.date - b.date));
+    const days = [...byDay.values()].sort((a, b) =>
+      ascending ? a.items[0].date - b.items[0].date : b.items[0].date - a.items[0].date);
+    return days;
+  }
+ 
+  const upcomingDays = groupByDay(upcoming, true);   // soonest first
+  const pastDays = groupByDay(past, false);          // most recent first
  
   document.getElementById('matchCount').innerHTML = `<strong>${filtered.length}</strong> match${filtered.length !== 1 ? 'es' : ''}`;
   document.getElementById('tzLabel').textContent = `Times in ${tzAbbr(tz)}`;
  
-  if (!days.length) {
+  if (filtered.length === 0) {
     document.getElementById('main').innerHTML = '<div class="empty">No matches found. Try a different filter or search.</div>';
     return;
   }
  
   const tournamentStart = new Date('2026-06-11T15:00:00-04:00');
  
-  let html = '';
-  days.forEach(group => {
-    const firstMatchOfDay = group.items[0].date;
-    const dayDiff = Math.round((firstMatchOfDay - tournamentStart) / 86400000);
-    const dayNum = dayDiff + 1;
+  function renderDays(days, isPast) {
+    let html = '';
+    days.forEach(group => {
+      const firstMatchOfDay = group.items[0].date;
+      const dayDiff = Math.round((firstMatchOfDay - tournamentStart) / 86400000);
+      const dayNum = dayDiff + 1;
  
-    html += `<div class="day-block">
-      <div class="day-header">
-        <div class="day-num">${String(dayNum).padStart(2,'0')}</div>
-        <div class="day-info">
-          <div class="day-name">${group.parts.weekday} ${group.parts.day} ${group.parts.month}</div>
-          <div class="day-tag">Tournament day ${dayNum}</div>
-        </div>
-        <div class="day-count">${group.items.length} match${group.items.length !== 1 ? 'es' : ''}</div>
-      </div>`;
- 
-    group.items.forEach(m => {
-      const time = getTimeStr(m.date, tz);
-      const srcDay = getDayParts(m.date, sourceTz);
-      const displayDay = getDayParts(m.date, tz);
-      const srcKey = `${srcDay.year}-${srcDay.month}-${srcDay.day}`;
-      const dispKey = `${displayDay.year}-${displayDay.month}-${displayDay.day}`;
-      let dayShift = '';
-      if (srcKey !== dispKey) {
-        const srcDateNum = parseInt(m.iso.substring(8,10));
-        if (parseInt(displayDay.day) !== srcDateNum) {
-          const isoFullDate = new Date(m.iso.substring(0,10));
-          const dispFullDate = new Date(`${displayDay.year}-${monthNum(displayDay.month)}-${pad(displayDay.day)}`);
-          const dir = dispFullDate > isoFullDate ? '+1' : '−1';
-          dayShift = `<span class="next-day">${dir} day</span>`;
-        }
-      }
- 
-      const teamsHtml = m.teams.length === 2
-        ? `<span class="flag">${teamFlag(m.teams[0])}</span>${m.teams[0]}<span class="vs">vs</span>${m.teams[1]}<span class="flag">${teamFlag(m.teams[1])}</span>`
-        : m.teams[0];
- 
-      const badgeCls = m.badge === 'FINAL' ? 'badge-final' : m.badge === '3RD' ? 'badge-3rd' : m.badge === 'SF' ? 'badge-sf' : m.badge === 'QF' ? 'badge-qf' : m.badge === 'R16' ? 'badge-r16' : m.badge === 'R32' ? 'badge-r32' : 'badge-group';
-      const chCls = m.ch === 'FOX' ? 'channel-fox' : 'channel-fs1';
-      const starred = state.starred.has(m.i);
- 
-      html += `<div class="match">
-        <div class="match-time">${time}${dayShift}</div>
-        <div class="match-badge ${badgeCls}">${m.badge}</div>
-        <div class="match-teams">${teamsHtml}</div>
-        <div class="channel ${chCls}">${m.ch}</div>
-        <div class="match-venue">${m.venue}</div>
-        <div class="cal-wrap">
-          <button class="icon-action" onclick="toggleCalMenu(this)" aria-label="Add to calendar">📅</button>
-          <div class="cal-popover">
-            <button onclick="openGCal(${m.i}, event)"><span class="ci">G</span><span class="cl">Google Calendar<span class="csub">Opens in a new tab</span></span></button>
-            <button onclick="downloadOne(${m.i}, event)"><span class="ci">⬇</span><span class="cl">Download .ics<span class="csub">Apple, Outlook, others</span></span></button>
+      html += `<div class="day-block">
+        <div class="day-header">
+          <div class="day-num">${String(dayNum).padStart(2,'0')}</div>
+          <div class="day-info">
+            <div class="day-name">${group.parts.weekday} ${group.parts.day} ${group.parts.month}</div>
+            <div class="day-tag">Tournament day ${dayNum}</div>
           </div>
-        </div>
-        <button class="icon-action star-btn ${starred ? 'starred' : ''}" data-idx="${m.i}" aria-label="Star match">${starred ? '★' : '☆'}</button>
-      </div>`;
+          <div class="day-count">${group.items.length} match${group.items.length !== 1 ? 'es' : ''}</div>
+        </div>`;
+ 
+      group.items.forEach(m => {
+        const time = getTimeStr(m.date, tz);
+        const srcDay = getDayParts(m.date, sourceTz);
+        const displayDay = getDayParts(m.date, tz);
+        const srcKey = `${srcDay.year}-${srcDay.month}-${srcDay.day}`;
+        const dispKey = `${displayDay.year}-${displayDay.month}-${displayDay.day}`;
+        let dayShift = '';
+        if (srcKey !== dispKey) {
+          const srcDateNum = parseInt(m.iso.substring(8,10));
+          if (parseInt(displayDay.day) !== srcDateNum) {
+            const dispFullDate = new Date(`${displayDay.year}-${monthNum(displayDay.month)}-${pad(displayDay.day)}`);
+            const isoFullDate = new Date(m.iso.substring(0,10));
+            const dir = dispFullDate > isoFullDate ? '+1' : '−1';
+            dayShift = `<span class="next-day">${dir} day</span>`;
+          }
+        }
+ 
+        // Build the teams display, with score wedge if we have one
+        let teamsHtml;
+        const hasScore = !!m.score;
+        const isPast = hasScore || m.date < now;
+        if (m.teams.length === 2) {
+          const [t1, t2] = m.teams;
+          const flag1 = teamFlag(t1);
+          const flag2 = teamFlag(t2);
+          if (hasScore) {
+            const [s1, s2] = m.score.split('-').map(Number);
+            const w1 = s1 > s2 ? ' winner' : '';
+            const w2 = s2 > s1 ? ' winner' : '';
+            teamsHtml = `<span class="flag">${flag1}</span><span class="team${w1}">${t1}</span>` +
+                        `<span class="match-score"><span class="${w1?'winner':''}">${s1}</span><span class="sep">–</span><span class="${w2?'winner':''}">${s2}</span></span>` +
+                        `<span class="team${w2}">${t2}</span><span class="flag">${flag2}</span>`;
+          } else {
+            teamsHtml = `<span class="flag">${flag1}</span>${t1}<span class="vs">vs</span>${t2}<span class="flag">${flag2}</span>`;
+          }
+        } else {
+          teamsHtml = m.teams[0];
+        }
+ 
+        const badgeCls = m.badge === 'FINAL' ? 'badge-final' : m.badge === '3RD' ? 'badge-3rd' : m.badge === 'SF' ? 'badge-sf' : m.badge === 'QF' ? 'badge-qf' : m.badge === 'R16' ? 'badge-r16' : m.badge === 'R32' ? 'badge-r32' : 'badge-group';
+        const chCls = m.ch === 'FOX' ? 'channel-fox' : 'channel-fs1';
+        const starred = state.starred.has(m.i);
+        const completedCls = isPast ? ' completed' : '';
+ 
+        html += `<div class="match${completedCls}">
+          <div class="match-time">${time}${dayShift}</div>
+          <div class="match-badge ${badgeCls}">${m.badge}</div>
+          <div class="match-teams">${teamsHtml}</div>
+          <div class="channel ${chCls}">${m.ch}</div>
+          <div class="match-venue">${m.venue}</div>
+          <div class="cal-wrap">
+            <button class="icon-action" onclick="toggleCalMenu(this)" aria-label="Add to calendar">📅</button>
+            <div class="cal-popover">
+              <button onclick="openGCal(${m.i}, event)"><span class="ci">G</span><span class="cl">Google Calendar<span class="csub">Opens in a new tab</span></span></button>
+              <button onclick="downloadOne(${m.i}, event)"><span class="ci">⬇</span><span class="cl">Download .ics<span class="csub">Apple, Outlook, others</span></span></button>
+            </div>
+          </div>
+          <button class="icon-action star-btn ${starred ? 'starred' : ''}" data-idx="${m.i}" aria-label="Star match">${starred ? '★' : '☆'}</button>
+        </div>`;
+      });
+      html += '</div>';
     });
-    html += '</div>';
-  });
+    return html;
+  }
+ 
+  let html = '';
+  if (upcomingDays.length) {
+    html += `<div class="section-header"><span class="sh-dot"></span>Upcoming<span class="sh-count">${upcoming.length} match${upcoming.length !== 1 ? 'es' : ''}</span></div>`;
+    html += renderDays(upcomingDays, false);
+  }
+  if (pastDays.length) {
+    html += `<div class="section-header past"><span class="sh-dot"></span>Completed · most recent first<span class="sh-count">${past.length} match${past.length !== 1 ? 'es' : ''}</span></div>`;
+    html += renderDays(pastDays, true);
+  }
  
   document.getElementById('main').innerHTML = html;
  
@@ -1301,3 +1400,4 @@ setInterval(renderNow, 1000);
  
 </body>
 </html>
+ 
