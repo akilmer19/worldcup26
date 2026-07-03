@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -601,52 +601,6 @@
     background: var(--bg-3);
     white-space: nowrap;
   }
- 
-  /* Live game indicator */
-  .live-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #ff4a3a;
-    padding: 3px 7px;
-    border-radius: 4px;
-    background: rgba(255, 74, 58, 0.12);
-    margin-left: 6px;
-    white-space: nowrap;
-  }
-  [data-theme="dark"] .live-badge { background: rgba(255, 122, 108, 0.18); color: #ff7a6c; }
-  .live-badge .lb-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: currentColor;
-    animation: pulse 1.5s infinite;
-  }
-  .live-badge .lb-clock { color: var(--ink); font-weight: 600; }
-  [data-theme="dark"] .live-badge .lb-clock { color: var(--ink); }
-  .match.live { opacity: 1 !important; background: linear-gradient(90deg, rgba(255,74,58,0.06), transparent 60%); }
-  .match.live .match-score { background: rgba(255,74,58,0.14); }
-  .live-status-strip {
-    max-width: 1100px;
-    margin: 8px auto 0;
-    padding: 0 24px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    color: var(--ink-mute);
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .live-status-strip .lss-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--pitch);
-  }
-  .live-status-strip.error .lss-dot { background: var(--ink-mute); }
   .winner { color: var(--pitch); font-weight: 700; }
   [data-theme="dark"] .winner { color: var(--pitch-light); }
   .section-header {
@@ -792,7 +746,6 @@
 </header>
  
 <div class="now-card" id="nowCard"></div>
-<div class="live-status-strip" id="liveStatus" style="display:none"></div>
  
 <div id="importBanner"></div>
  
@@ -944,8 +897,8 @@ const matches = [
   {i:91,iso:"2026-07-05T20:00:00-04:00",stage:"r16",badge:"R16",teams:["Mexico","England"],venue:"Estadio Azteca, Mexico City",ch:"FOX"},
   {i:92,iso:"2026-07-06T15:00:00-04:00",stage:"r16",badge:"R16",teams:["Portugal","Spain"],venue:"AT&T Stadium, Arlington",ch:"FOX"},
   {i:93,iso:"2026-07-06T20:00:00-04:00",stage:"r16",badge:"R16",teams:["USA","Belgium"],venue:"Lumen Field, Seattle",ch:"FOX"},
-  {i:94,iso:"2026-07-07T12:00:00-04:00",stage:"r16",badge:"R16",teams:["R32-86 W","R32-88 W"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX"},
-  {i:95,iso:"2026-07-07T16:00:00-04:00",stage:"r16",badge:"R16",teams:["R32-85 W","R32-87 W"],venue:"BC Place, Vancouver",ch:"FOX"},
+  {i:94,iso:"2026-07-07T12:00:00-04:00",stage:"r16",badge:"R16",teams:["Argentina/Cape Verde W","Australia/Egypt W"],venue:"Mercedes-Benz Stadium, Atlanta",ch:"FOX"},
+  {i:95,iso:"2026-07-07T16:00:00-04:00",stage:"r16",badge:"R16",teams:["Switzerland","Colombia/Ghana W"],venue:"BC Place, Vancouver",ch:"FOX"},
   {i:96,iso:"2026-07-09T16:00:00-04:00",stage:"qf",badge:"QF",teams:["Quarterfinal 1"],venue:"Gillette Stadium, Foxborough",ch:"FOX"},
   {i:97,iso:"2026-07-10T15:00:00-04:00",stage:"qf",badge:"QF",teams:["Quarterfinal 2"],venue:"SoFi Stadium, Inglewood",ch:"FOX"},
   {i:98,iso:"2026-07-11T17:00:00-04:00",stage:"qf",badge:"QF",teams:["Quarterfinal 3"],venue:"Hard Rock Stadium, Miami",ch:"FOX"},
@@ -1001,115 +954,6 @@ let state = {
 tzSelect.value = state.tz;
 document.documentElement.setAttribute('data-theme', state.theme);
 document.getElementById('themeToggle').textContent = state.theme === 'dark' ? '☀' : '☾';
- 
-// ============================================================
-// LIVE DATA — fetches from ESPN's public FIFA World Cup endpoint
-// ============================================================
- 
-// Normalize team names since ESPN and our data sometimes differ
-const TEAM_ALIASES = {
-  "usa": "united states", "united states": "united states",
-  "türkiye": "turkiye", "turkey": "turkiye",
-  "dr congo": "dr congo", "congo dr": "dr congo",
-  "congo (dr)": "dr congo", "democratic republic of the congo": "dr congo",
-  "cape verde": "cape verde", "cabo verde": "cape verde",
-  "south korea": "south korea", "korea republic": "south korea",
-  "bosnia & herzegovina": "bosnia", "bosnia and herzegovina": "bosnia",
-  "ivory coast": "ivory coast", "côte d'ivoire": "ivory coast",
-  "cote d'ivoire": "ivory coast",
-  "czechia": "czechia", "czech republic": "czechia",
-};
- 
-function normalizeTeam(name) {
-  const lower = name.toLowerCase().trim();
-  return TEAM_ALIASES[lower] || lower;
-}
- 
-function pairKey(t1, t2) {
-  return [normalizeTeam(t1), normalizeTeam(t2)].sort().join('|');
-}
- 
-// Live data map: pairKey -> { state, clock, detail, home, away, homeScore, awayScore }
-let liveData = {};
-let liveDataFetched = null;   // timestamp of last successful fetch
-let liveDataError = false;
- 
-function espnDateStr(d) {
-  return d.getUTCFullYear() +
-    String(d.getUTCMonth() + 1).padStart(2, '0') +
-    String(d.getUTCDate()).padStart(2, '0');
-}
- 
-async function fetchLiveData() {
-  try {
-    // Query a rolling window that catches recent + upcoming
-    const now = new Date();
-    const start = new Date(now.getTime() - 2 * 86400 * 1000);
-    const end = new Date(now.getTime() + 3 * 86400 * 1000);
-    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${espnDateStr(start)}-${espnDateStr(end)}&limit=200`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const newData = {};
-    for (const event of (data.events || [])) {
-      const comp = event.competitions && event.competitions[0];
-      if (!comp || !comp.competitors || comp.competitors.length !== 2) continue;
-      const [c1, c2] = comp.competitors;
-      const key = pairKey(c1.team.displayName, c2.team.displayName);
-      newData[key] = {
-        state: comp.status.type.state,           // "pre" | "in" | "post"
-        clock: comp.status.displayClock || '',   // "45'", "HT", etc.
-        detail: comp.status.type.shortDetail || '',
-        home: c1.team.displayName,
-        away: c2.team.displayName,
-        homeScore: parseInt(c1.score) || 0,
-        awayScore: parseInt(c2.score) || 0,
-        completed: comp.status.type.completed,
-      };
-    }
-    liveData = newData;
-    liveDataFetched = new Date();
-    liveDataError = false;
-    updateLiveStatus();
-    render();
-    renderNow();
-  } catch (e) {
-    console.warn('Live data fetch failed:', e);
-    liveDataError = true;
-    updateLiveStatus();
-  }
-}
- 
-function updateLiveStatus() {
-  const el = document.getElementById('liveStatus');
-  if (!el) return;
-  const liveCount = Object.values(liveData).filter(d => d.state === 'in').length;
-  if (liveDataError && !liveDataFetched) {
-    el.style.display = 'flex';
-    el.className = 'live-status-strip error';
-    el.innerHTML = `<span class="lss-dot"></span>Live scores unavailable — schedule shown from stored data`;
-    return;
-  }
-  if (!liveDataFetched) { el.style.display = 'none'; return; }
-  el.style.display = 'flex';
-  el.className = 'live-status-strip';
-  const timeStr = liveDataFetched.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  el.innerHTML = liveCount > 0
-    ? `<span class="lss-dot" style="background:#ff4a3a;animation:pulse 1.5s infinite"></span>${liveCount} live · updated ${timeStr}`
-    : `<span class="lss-dot"></span>Live scores · updated ${timeStr}`;
-}
- 
-function getLiveForMatch(m) {
-  if (m.teams.length !== 2) return null;
-  const key = pairKey(m.teams[0], m.teams[1]);
-  return liveData[key] || null;
-}
- 
-// Kick off polling immediately, then every 30s
-fetchLiveData();
-setInterval(fetchLiveData, 30000);
- 
-// ============================================================
  
 function resolvedTz() { return state.tz === 'auto' ? userTz : state.tz; }
 function getDayParts(date, tz) {
@@ -1302,16 +1146,10 @@ function renderNow() {
   const now = new Date();
   const tz = resolvedTz();
  
-  // Find current live match (ESPN says "in" state, or kicked off <2.5h ago with no score)
+  // Find current live match (kicked off within last 2.5h, no score yet) or next match
   let live = null, next = null;
   for (const m of matches) {
-    const info = getLiveForMatch(m);
-    if (info && info.state === 'in') {
-      if (!live) live = m;
-      continue;
-    }
-    if (m.score) continue;  // already played (manual data)
-    if (info && info.state === 'post') continue;  // ESPN says finished
+    if (m.score) continue;  // already played, skip
     const start = new Date(m.iso);
     const elapsedMs = now - start;
     if (elapsedMs >= 0 && elapsedMs < 2.5 * 3600 * 1000) {
@@ -1332,28 +1170,12 @@ function renderNow() {
     : target.teams[0];
  
   if (live) {
-    const info = getLiveForMatch(live);
-    let scoreLine = '';
-    let clockLine = `Kicked off · <strong>${timeStr}</strong>`;
-    if (info) {
-      // Map ESPN home/away back to our team order
-      const t1Norm = normalizeTeam(live.teams[0]);
-      const homeNorm = normalizeTeam(info.home);
-      const t1IsHome = t1Norm === homeNorm;
-      const s1 = t1IsHome ? info.homeScore : info.awayScore;
-      const s2 = t1IsHome ? info.awayScore : info.homeScore;
-      scoreLine = `<div style="font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:700;letter-spacing:0.05em;margin:6px 0 2px;color:#fff">${s1} <span style="color:rgba(255,255,255,0.4);font-weight:400">–</span> ${s2}</div>`;
-      if (info.clock || info.detail) {
-        clockLine = `<strong>${info.clock || info.detail}</strong>`;
-      }
-    }
     card.innerHTML = `<div class="now-inner">
       <div class="now-label live"><span class="live-dot"></span>Live now</div>
       <div class="now-title">${teamsStr}</div>
-      ${scoreLine}
       <div class="now-meta">
         <span>${target.venue}</span>
-        <span>${clockLine}</span>
+        <span>Kicked off · <strong>${timeStr}</strong></span>
         <span>English: <strong>${target.ch}</strong> · Spanish: <strong>Telemundo</strong></span>
       </div>
     </div>`;
@@ -1417,14 +1239,13 @@ function render() {
     return true;
   });
  
-  // Split into upcoming and past. Live games stay at top (upcoming) so they get attention.
+  // Split into upcoming and past based on either having a score (definitively completed)
+  // or kickoff being in the past
   const upcoming = [];
   const past = [];
   filtered.forEach(m => {
     const start = new Date(m.iso);
-    const liveInfo = getLiveForMatch(m);
-    const isLive = liveInfo && liveInfo.state === 'in';
-    const completed = !isLive && (m.score || (liveInfo && liveInfo.state === 'post') || start < now);
+    const completed = m.score || start < now;
     (completed ? past : upcoming).push(m);
   });
  
@@ -1491,41 +1312,21 @@ function render() {
         }
  
         // Build the teams display, with score wedge if we have one
-        // Live data overrides stored score for in-progress matches
         let teamsHtml;
-        const liveInfo = getLiveForMatch(m);
-        const isLive = liveInfo && liveInfo.state === 'in';
-        // Score: prefer live data (for post-game where API has it but we don't)
-        let effectiveScore = m.score;
-        let scoreFromLive = false;
-        if (liveInfo && (liveInfo.state === 'in' || liveInfo.state === 'post')) {
-          // Map ESPN's home/away back to our team order
-          const t1Norm = normalizeTeam(m.teams[0]);
-          const homeNorm = normalizeTeam(liveInfo.home);
-          const t1IsHome = t1Norm === homeNorm;
-          const s1 = t1IsHome ? liveInfo.homeScore : liveInfo.awayScore;
-          const s2 = t1IsHome ? liveInfo.awayScore : liveInfo.homeScore;
-          const liveScore = `${s1}-${s2}`;
-          if (!m.score || isLive) {
-            effectiveScore = liveScore;
-            scoreFromLive = !m.score;
-          }
-        }
-        const hasScore = !!effectiveScore;
+        const hasScore = !!m.score;
         const isPast = hasScore || m.date < now;
         if (m.teams.length === 2) {
           const [t1, t2] = m.teams;
           const flag1 = teamFlag(t1);
           const flag2 = teamFlag(t2);
           if (hasScore) {
-            const [s1, s2] = effectiveScore.split('-').map(Number);
-            const w1 = !isLive && s1 > s2 ? ' winner' : '';
-            const w2 = !isLive && s2 > s1 ? ' winner' : '';
+            const [s1, s2] = m.score.split('-').map(Number);
+            const w1 = s1 > s2 ? ' winner' : '';
+            const w2 = s2 > s1 ? ' winner' : '';
             const noteHtml = m.note ? `<span class="match-note" title="${m.note}">${m.note}</span>` : '';
-            const liveHtml = isLive ? `<span class="live-badge"><span class="lb-dot"></span>Live<span class="lb-clock">${liveInfo.clock || liveInfo.detail || ''}</span></span>` : '';
             teamsHtml = `<span class="flag">${flag1}</span><span class="team${w1}">${t1}</span>` +
                         `<span class="match-score"><span class="${w1?'winner':''}">${s1}</span><span class="sep">–</span><span class="${w2?'winner':''}">${s2}</span></span>` +
-                        `<span class="team${w2}">${t2}</span><span class="flag">${flag2}</span>${liveHtml}${noteHtml}`;
+                        `<span class="team${w2}">${t2}</span><span class="flag">${flag2}</span>${noteHtml}`;
           } else {
             teamsHtml = `<span class="flag">${flag1}</span>${t1}<span class="vs">vs</span>${t2}<span class="flag">${flag2}</span>`;
           }
@@ -1536,8 +1337,7 @@ function render() {
         const badgeCls = m.badge === 'FINAL' ? 'badge-final' : m.badge === '3RD' ? 'badge-3rd' : m.badge === 'SF' ? 'badge-sf' : m.badge === 'QF' ? 'badge-qf' : m.badge === 'R16' ? 'badge-r16' : m.badge === 'R32' ? 'badge-r32' : 'badge-group';
         const chCls = m.ch === 'FOX' ? 'channel-fox' : 'channel-fs1';
         const starred = state.starred.has(m.i);
-        // Live games shouldn't look greyed out; past-and-completed do
-        const completedCls = isLive ? ' live' : (isPast ? ' completed' : '');
+        const completedCls = isPast ? ' completed' : '';
  
         html += `<div class="match${completedCls}">
           <div class="match-time">${time}${dayShift}</div>
