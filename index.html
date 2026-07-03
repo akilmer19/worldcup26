@@ -356,7 +356,68 @@
     gap: 6px;
   }
   .icon-btn:hover { border-color: var(--ink-mute); color: var(--ink); }
- 
+
+  /* Live mode toggle + status */
+  .live-toggle {
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .live-toggle:hover { border-color: var(--ink-mute); color: var(--ink); }
+  .live-toggle.on {
+    background: rgba(220,38,38,0.12);
+    border-color: rgba(220,38,38,0.5);
+    color: #dc2626;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    background: #dc2626;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 0 rgba(220,38,38,0.6);
+    animation: livePulse 1.4s infinite;
+  }
+  @keyframes livePulse {
+    0%   { box-shadow: 0 0 0 0 rgba(220,38,38,0.55); }
+    70%  { box-shadow: 0 0 0 6px rgba(220,38,38,0); }
+    100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+  }
+  .live-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    display: inline-flex;
+    align-items: center;
+  }
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 8px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(220,38,38,0.12);
+    color: #dc2626;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
   .meta-line {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -765,6 +826,8 @@
       <input class="search-input" type="text" id="searchInput" placeholder="Search team or venue...">
       <button class="icon-btn" id="shareBtn" title="Share starred matches">↗ Share</button>
       <button class="icon-btn" id="exportStarBtn" title="Download all starred as .ics (works with Google Calendar via Import)">⬇ Export starred</button>
+      <button class="live-toggle" id="liveToggle" aria-pressed="false" title="Fetch live scores from ESPN and overwrite listed scores while games are in progress">Live: Off</button>
+      <span class="live-status" id="liveStatus"></span>
       <div class="meta-line">
         <span id="matchCount"></span>
         <span class="meta-dot"></span>
@@ -908,7 +971,95 @@ const matches = [
   {i:102,iso:"2026-07-18T17:00:00-04:00",stage:"sf",badge:"3RD",teams:["Third-place match"],venue:"Hard Rock Stadium, Miami",ch:"FOX"},
   {i:103,iso:"2026-07-19T15:00:00-04:00",stage:"sf",badge:"FINAL",teams:["World Cup Final"],venue:"MetLife Stadium, NJ",ch:"FOX"},
 ];
- 
+
+// ---- Automatic bracket progression -------------------------------------
+// Each knockout match is rebuilt from its two feeders. A feeder is
+// ['W', srcIndex] (winner advances) or ['L', srcIndex] (loser, for 3rd place).
+// Winners/losers are derived from each match's score (and note for shootouts),
+// so entering a score automatically advances the correct team to the next round.
+const FEEDS = {
+  // Round of 32 winners -> Round of 16
+  88: [['W', 72], ['W', 75]],
+  89: [['W', 74], ['W', 77]],
+  90: [['W', 73], ['W', 76]],
+  91: [['W', 78], ['W', 79]],
+  92: [['W', 83], ['W', 82]],
+  93: [['W', 81], ['W', 80]],
+  94: [['W', 86], ['W', 85]],
+  95: [['W', 84], ['W', 87]],
+  // Round of 16 winners -> Quarterfinals
+  96: [['W', 89], ['W', 88]],
+  97: [['W', 92], ['W', 93]],
+  98: [['W', 90], ['W', 91]],
+  99: [['W', 94], ['W', 95]],
+  // Quarterfinal winners -> Semifinals
+  100: [['W', 96], ['W', 97]],
+  101: [['W', 98], ['W', 99]],
+  // Semifinal losers -> Third-place, winners -> Final
+  102: [['L', 100], ['L', 101]],
+  103: [['W', 100], ['W', 101]],
+};
+
+// Determine the winner of a completed match from its score (ties resolved via
+// the note, e.g. "Paraguay adv. 4–3 pens"). Returns null if undecided.
+function scoreWinner(m) {
+  if (!m.score || m.teams.length !== 2) return null;
+  const p = m.score.split('-').map(x => parseInt(x, 10));
+  if (p.length !== 2 || isNaN(p[0]) || isNaN(p[1])) return null;
+  if (p[0] > p[1]) return m.teams[0];
+  if (p[1] > p[0]) return m.teams[1];
+  if (m.note) {
+    for (const t of m.teams) { if (m.note.indexOf(t) === 0) return t; }
+    const i0 = m.note.indexOf(m.teams[0]), i1 = m.note.indexOf(m.teams[1]);
+    if (i0 >= 0 && (i1 < 0 || i0 < i1)) return m.teams[0];
+    if (i1 >= 0) return m.teams[1];
+  }
+  return null;
+}
+
+function matchOutcome(m, type) {
+  const w = scoreWinner(m);
+  if (w == null) return null;
+  return type === 'W' ? w : (m.teams[0] === w ? m.teams[1] : m.teams[0]);
+}
+
+// True for a concrete team name (not one of our generated placeholders).
+function isRealTeam(s) {
+  return !!s && !s.includes(' vs ') && !s.includes('/') &&
+         !/^Winner: |^Loser: | winner$| loser$/.test(s);
+}
+
+const STAGE_LABEL = { r32: 'R32', r16: 'R16', qf: 'QF', sf: 'SF' };
+function feederLabel(m, type) {
+  if (m.teams.length === 2 && isRealTeam(m.teams[0]) && isRealTeam(m.teams[1])) {
+    return (type === 'L' ? 'Loser: ' : 'Winner: ') + m.teams[0] + ' / ' + m.teams[1];
+  }
+  const r = STAGE_LABEL[m.stage] ? STAGE_LABEL[m.stage] + ' ' : '';
+  return r + (type === 'L' ? 'loser' : 'winner');
+}
+
+function applyBracket() {
+  const byId = {};
+  matches.forEach(m => { byId[m.i] = m; });
+  // Ascending order guarantees each feeder is resolved before its target.
+  Object.keys(FEEDS).map(Number).sort((a, b) => a - b).forEach(id => {
+    const t = byId[id];
+    const [f0, f1] = FEEDS[id];
+    const s0 = byId[f0[1]], s1 = byId[f1[1]];
+    if (!t || !s0 || !s1) return;
+    const o0 = matchOutcome(s0, f0[0]);
+    const o1 = matchOutcome(s1, f1[0]);
+    if (o0 != null && o1 != null) {
+      t.teams = [o0, o1];
+    } else {
+      const l0 = o0 != null ? o0 : feederLabel(s0, f0[0]);
+      const l1 = o1 != null ? o1 : feederLabel(s1, f1[0]);
+      t.teams = [l0 + ' vs ' + l1];
+    }
+  });
+}
+applyBracket();
+
 // Timezone list
 const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const commonTzs = [
@@ -1324,9 +1475,11 @@ function render() {
             const w1 = s1 > s2 ? ' winner' : '';
             const w2 = s2 > s1 ? ' winner' : '';
             const noteHtml = m.note ? `<span class="match-note" title="${m.note}">${m.note}</span>` : '';
+            const liveHtml = (m.live && m.live.state === 'in')
+              ? `<span class="live-badge" title="${m.live.detail}"><span class="live-dot"></span>${m.live.detail}</span>` : '';
             teamsHtml = `<span class="flag">${flag1}</span><span class="team${w1}">${t1}</span>` +
                         `<span class="match-score"><span class="${w1?'winner':''}">${s1}</span><span class="sep">–</span><span class="${w2?'winner':''}">${s2}</span></span>` +
-                        `<span class="team${w2}">${t2}</span><span class="flag">${flag2}</span>${noteHtml}`;
+                        `<span class="team${w2}">${t2}</span><span class="flag">${flag2}</span>${noteHtml}${liveHtml}`;
           } else {
             teamsHtml = `<span class="flag">${flag1}</span>${t1}<span class="vs">vs</span>${t2}<span class="flag">${flag2}</span>`;
           }
@@ -1384,7 +1537,171 @@ function render() {
  
 const MONTH_MAP = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
 function monthNum(m) { return MONTH_MAP[m] || '01'; }
- 
+
+// ---- Live scores (ESPN unofficial API, keyless) -------------------------
+// When "Live" is on, poll ESPN's public scoreboard and OVERWRITE listed
+// scores for any in-progress or finished game whose teams + date match.
+// Turning it off restores the hard-coded scores. Winners still advance
+// through applyBracket(), so live results flow into later rounds too.
+const LIVE = (() => {
+  const ENDPOINT = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=';
+  const REFRESH_MS = 30000;
+  const KEY = 'wc2026_live';
+  let timer = null, lastUpdated = null, lastError = false;
+
+  // Snapshot hard-coded scores so we can restore them when live mode is off.
+  const ORIGINAL = {};
+  matches.forEach(m => { ORIGINAL[m.i] = { score: m.score, note: m.note }; });
+
+  // ESPN name -> site name. Keys are already canonicalized (lowercase, no accents).
+  const ALIAS = {
+    'united states': 'usa', 'usmnt': 'usa',
+    'korea republic': 'south korea', 'republic of korea': 'south korea',
+    'korea dpr': 'north korea',
+    'ir iran': 'iran',
+    'cote divoire': 'ivory coast',
+    'cabo verde': 'cape verde',
+    'congo dr': 'dr congo', 'dr congo': 'dr congo',
+    'turkiye': 'turkey',
+    'czechia': 'czech republic',
+    'china pr': 'china',
+    'usa': 'usa'
+  };
+  function canon(name) {
+    if (!name) return '';
+    const s = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+    return ALIAS[s] || s;
+  }
+
+  function etDateKey(d) {
+    const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+    const g = t => p.find(x => x.type === t).value;
+    return g('year') + g('month') + g('day');
+  }
+
+  function datesToQuery() {
+    const now = Date.now();
+    const keys = new Set([etDateKey(new Date())]);
+    matches.forEach(m => {
+      const t = new Date(m.iso).getTime();
+      if (t >= now - 12 * 3600e3 && t <= now + 24 * 3600e3) keys.add(etDateKey(new Date(m.iso)));
+    });
+    return [...keys];
+  }
+
+  function nameOf(c) {
+    return (c.team && (c.team.displayName || c.team.name || c.team.shortDisplayName || c.team.location)) || '';
+  }
+
+  function findMatch(names, etKey) {
+    const a = canon(names[0]), b = canon(names[1]);
+    return matches.find(m => {
+      if (m.teams.length !== 2) return false;
+      const x = canon(m.teams[0]), y = canon(m.teams[1]);
+      if (!((x === a && y === b) || (x === b && y === a))) return false;
+      return etDateKey(new Date(m.iso)) === etKey;
+    });
+  }
+
+  function applyEvent(ev) {
+    const comp = ev.competitions && ev.competitions[0];
+    if (!comp || !comp.competitors || comp.competitors.length !== 2) return false;
+    const cs = comp.competitors;
+    const m = findMatch(cs.map(nameOf), etDateKey(new Date(ev.date)));
+    if (!m) return false;
+    const st = (ev.status && ev.status.type) || {};
+    const state = st.state || 'pre';                 // pre | in | post
+    if (state === 'pre') return false;               // nothing to overwrite yet
+    // Align ESPN competitors to the site's team order.
+    const key0 = canon(m.teams[0]);
+    const c0 = cs.find(c => canon(nameOf(c)) === key0) || cs[0];
+    const c1 = cs.find(c => c !== c0) || cs[1];
+    const s0 = parseInt(c0.score, 10), s1 = parseInt(c1.score, 10);
+    if (isNaN(s0) || isNaN(s1)) return false;
+    m.score = s0 + '-' + s1;
+    m.live = { state, detail: st.shortDetail || st.detail || (state === 'in' ? 'LIVE' : 'FT') };
+    // Penalty shootout on a level knockout tie.
+    const p0 = c0.shootoutScore != null ? parseInt(c0.shootoutScore, 10) : null;
+    const p1 = c1.shootoutScore != null ? parseInt(c1.shootoutScore, 10) : null;
+    if (s0 === s1 && p0 != null && p1 != null && p0 !== p1) {
+      const win = p0 > p1 ? m.teams[0] : m.teams[1];
+      m.note = win + ' adv. ' + Math.max(p0, p1) + '\u2013' + Math.min(p0, p1) + ' pens';
+    } else if (s0 !== s1) {
+      m.note = undefined;                            // overwrite: drop any stale note
+    }
+    return true;
+  }
+
+  async function fetchDate(key) {
+    const res = await fetch(ENDPOINT + key, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  async function refresh() {
+    if (!isOn()) return;
+    try {
+      const results = await Promise.all(datesToQuery().map(k => fetchDate(k).catch(() => null)));
+      let changed = false;
+      results.forEach(j => { if (j && j.events) j.events.forEach(ev => { if (applyEvent(ev)) changed = true; }); });
+      lastError = false;
+      lastUpdated = new Date();
+      applyBracket();
+      render(); renderNow();
+      paintStatus();
+    } catch (e) {
+      lastError = true;
+      paintStatus();
+    }
+  }
+
+  function restoreOriginal() {
+    matches.forEach(m => {
+      const o = ORIGINAL[m.i];
+      m.score = o.score; m.note = o.note; delete m.live;
+    });
+    applyBracket(); render(); renderNow();
+  }
+
+  function isOn() { return localStorage.getItem(KEY) === '1'; }
+  function setOn(on) {
+    localStorage.setItem(KEY, on ? '1' : '0');
+    if (on) { start(); refresh(); }
+    else { stop(); restoreOriginal(); }
+    paintToggle(); paintStatus();
+  }
+  function start() { if (!timer) timer = setInterval(refresh, REFRESH_MS); }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+  function paintToggle() {
+    const btn = document.getElementById('liveToggle');
+    if (!btn) return;
+    const on = isOn();
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.innerHTML = on ? '<span class="live-dot"></span>Live: On' : 'Live: Off';
+  }
+  function paintStatus() {
+    const el = document.getElementById('liveStatus');
+    if (!el) return;
+    if (!isOn()) { el.textContent = ''; return; }
+    if (lastError) { el.textContent = 'Update failed — showing last data'; return; }
+    if (lastUpdated) {
+      el.textContent = 'Updated ' + lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else { el.textContent = 'Updating\u2026'; }
+  }
+
+  function init() {
+    const btn = document.getElementById('liveToggle');
+    if (btn) btn.addEventListener('click', () => setOn(!isOn()));
+    paintToggle(); paintStatus();
+    if (isOn()) { start(); refresh(); }
+  }
+
+  return { init };
+})();
+
 // Wire up
 document.querySelectorAll('.filter-chip').forEach(chip => {
   chip.addEventListener('click', () => {
@@ -1408,6 +1725,7 @@ tzSelect.addEventListener('change', (e) => {
 handleSharedLink();
 renderNow();
 render();
+LIVE.init();
 setInterval(renderNow, 1000);
 </script>
  
