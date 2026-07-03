@@ -841,6 +841,86 @@
     .theme-toggle { width: 34px; height: 34px; }
     .cd-num { font-size: 38px; }
   }
+
+  /* ---- View tabs ------------------------------------------------------ */
+  .viewnav {
+    position: sticky; top: 0; z-index: 30;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .viewnav-inner {
+    max-width: 1180px; margin: 0 auto;
+    display: flex; gap: 4px;
+    padding: 8px 24px;
+  }
+  .viewtab {
+    appearance: none; border: 0; cursor: pointer;
+    background: transparent; color: var(--ink-mute);
+    font-family: 'DM Sans', sans-serif; font-weight: 600;
+    font-size: 13px; letter-spacing: 0.02em;
+    padding: 8px 16px; border-radius: 8px;
+    transition: background 0.14s, color 0.14s;
+  }
+  .viewtab:hover { color: var(--ink); background: var(--bg-2); }
+  .viewtab.active { color: #fff; background: var(--pitch); }
+  [data-theme="dark"] .viewtab.active { color: var(--bg); background: var(--pitch-light); }
+
+  /* ---- Awards --------------------------------------------------------- */
+  .awards-wrap { max-width: 1180px; margin: 0 auto; padding: 24px 24px 60px; }
+  .awards-intro { margin: 4px 0 22px; }
+  .awards-intro h2 {
+    font-family: 'Space Grotesk', 'DM Sans', sans-serif;
+    font-size: 26px; font-weight: 700; letter-spacing: -0.01em;
+    color: var(--ink); margin: 0 0 6px;
+  }
+  .awards-intro p { margin: 0; color: var(--ink-mute); font-size: 13px; max-width: 640px; line-height: 1.5; }
+  .awards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+  .award-card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 18px 18px 10px;
+  }
+  .award-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+  .award-head .medal { font-size: 18px; }
+  .award-head h3 {
+    font-family: 'Space Grotesk', 'DM Sans', sans-serif;
+    font-size: 16px; font-weight: 700; color: var(--ink); margin: 0;
+  }
+  .award-head .award-tag {
+    margin-left: auto; font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-mute); border: 1px solid var(--line);
+    padding: 2px 7px; border-radius: 20px;
+  }
+  .award-sub { color: var(--ink-mute); font-size: 12px; margin: 0 0 12px; }
+  .board { list-style: none; margin: 0; padding: 0; }
+  .board-row {
+    display: grid; grid-template-columns: 26px 1fr auto;
+    align-items: center; gap: 10px;
+    padding: 9px 4px; border-top: 1px solid var(--line-soft);
+  }
+  .board-row:first-child { border-top: 0; }
+  .b-rank {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--ink-mute); text-align: center;
+  }
+  .board-row.top .b-rank { font-size: 15px; }
+  .b-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .b-flag { font-size: 15px; flex: none; }
+  .b-name { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .b-team { color: var(--ink-mute); font-size: 12px; white-space: nowrap; }
+  .b-val {
+    font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    font-size: 15px; color: var(--ink);
+    display: flex; align-items: baseline; gap: 7px;
+  }
+  .b-val .b-note { font-weight: 400; font-size: 10.5px; color: var(--ink-mute); }
+  .board-empty { color: var(--ink-mute); font-size: 13px; padding: 14px 4px; }
+  @media (max-width: 720px) {
+    .awards-wrap { padding: 18px 14px 50px; }
+    .viewnav-inner { padding: 7px 14px; }
+    .b-team { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -853,9 +933,18 @@
     <div class="strapline">JUN 11 — JUL 19 · 2026 &nbsp;<span>//</span>&nbsp; USA · CANADA · MEXICO &nbsp;<span>//</span>&nbsp; 48 TEAMS · 104 MATCHES</div>
   </div>
 </header>
- 
+
+<nav class="viewnav" aria-label="Views">
+  <div class="viewnav-inner">
+    <button class="viewtab active" data-view="schedule">Schedule</button>
+    <button class="viewtab" data-view="awards">Awards</button>
+  </div>
+</nav>
+
+<div class="view" id="view-schedule">
+
 <div class="now-card" id="nowCard"></div>
- 
+
 <div id="importBanner"></div>
  
 <div class="controls">
@@ -886,7 +975,13 @@
 </div>
  
 <main id="main"></main>
- 
+
+</div><!-- /view-schedule -->
+
+<div class="view" id="view-awards" hidden>
+  <div class="awards-wrap" id="awardsWrap"></div>
+</div>
+
 <footer>
   Times converted from official FIFA schedule (ET) · Local times shown for selected zone<br>
   English: FOX (70) · FS1 (34) · 4K streaming on FOX One & FOX Sports app<br>
@@ -1143,6 +1238,7 @@ commonTzs.forEach(([val, label]) => {
  
 // State
 let state = {
+  view: 'schedule',
   stage: 'all',
   search: '',
   tz: localStorage.getItem('wc2026_tz') || 'auto',
@@ -1608,6 +1704,106 @@ function render() {
 const MONTH_MAP = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
 function monthNum(m) { return MONTH_MAP[m] || '01'; }
 
+// ---- Awards: Golden Boot race + clean sheets ----------------------------
+// Golden Boot is fully data-driven from parsed ESPN goals (own goals excluded,
+// penalties counted). Clean sheets are derived from finished-match scores as a
+// team-level proxy for the Golden Glove (the feed has no keeper/lineup data).
+function computeAwards() {
+  const now = Date.now();
+  const scorers = new Map();   // "player||team" -> { player, team, goals, pens }
+  const sheets = new Map();    // team -> { team, cs, played, ga }
+  matches.forEach(m => {
+    if (m.teams.length !== 2) return;
+    (m.events || []).forEach(e => {
+      if (e.kind !== 'goal' || e.og || !e.player) return;
+      const key = e.player + '||' + e.team;
+      const rec = scorers.get(key) || { player: e.player, team: e.team, goals: 0, pens: 0 };
+      rec.goals++; if (e.pen) rec.pens++;
+      scorers.set(key, rec);
+    });
+    const mt = /^(\d+)-(\d+)$/.exec(m.score || '');
+    const finished = mt && (new Date(m.iso).getTime() + 2 * 3600e3 < now);
+    if (finished) {
+      const a = +mt[1], b = +mt[2];
+      [[0, b], [1, a]].forEach(([side, conceded]) => {
+        const t = m.teams[side];
+        const rec = sheets.get(t) || { team: t, cs: 0, played: 0, ga: 0 };
+        rec.played++; rec.ga += conceded; if (conceded === 0) rec.cs++;
+        sheets.set(t, rec);
+      });
+    }
+  });
+  const boot = [...scorers.values()].sort((x, y) =>
+    y.goals - x.goals || y.pens - x.pens || x.player.localeCompare(y.player));
+  const glove = [...sheets.values()].filter(r => r.cs > 0).sort((x, y) =>
+    y.cs - x.cs || x.ga - y.ga || x.played - y.played || x.team.localeCompare(y.team));
+  return { boot, glove };
+}
+
+function medalFor(rank) { return rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : ''; }
+
+// Dense ranking: rows sharing the value share a position.
+function rankedRows(rows, valueOf, rowHtml) {
+  let prevVal = null, pos = 0;
+  return rows.map((r, i) => {
+    const v = valueOf(r);
+    if (v !== prevVal) { pos = i + 1; prevVal = v; }
+    return rowHtml(r, pos);
+  }).join('');
+}
+
+function renderAwards() {
+  const wrap = document.getElementById('awardsWrap');
+  if (!wrap) return;
+  const { boot, glove } = computeAwards();
+
+  const bootRows = boot.length ? rankedRows(boot, r => r.goals, (r, pos) => {
+    const med = medalFor(pos);
+    const note = r.pens ? `<span class="b-note">${r.pens} pen${r.pens > 1 ? 's' : ''}</span>` : '';
+    return `<li class="board-row${pos <= 3 ? ' top' : ''}">
+      <span class="b-rank">${med || pos}</span>
+      <span class="b-main"><span class="b-flag">${teamFlag(r.team)}</span><span class="b-name">${r.player}</span><span class="b-team">${r.team}</span></span>
+      <span class="b-val">${r.goals}${note}</span>
+    </li>`;
+  }) : '<div class="board-empty">No goals recorded yet — check back once matches kick off.</div>';
+
+  const gloveRows = glove.length ? rankedRows(glove, r => r.cs, (r, pos) => {
+    const med = medalFor(pos);
+    return `<li class="board-row${pos <= 3 ? ' top' : ''}">
+      <span class="b-rank">${med || pos}</span>
+      <span class="b-main"><span class="b-flag">${teamFlag(r.team)}</span><span class="b-name">${r.team}</span><span class="b-team">${r.played} played · ${r.ga} conceded</span></span>
+      <span class="b-val">${r.cs}</span>
+    </li>`;
+  }) : '<div class="board-empty">No clean sheets yet.</div>';
+
+  wrap.innerHTML = `
+    <div class="awards-intro">
+      <h2>The Race for the Trophies</h2>
+      <p>Live from played matches. The <strong>Golden Boot</strong> tracks top scorers (penalties count, own goals don't). <strong>Clean sheets by team</strong> stand in for the Golden Glove — the score feed has no goalkeeper data. The Golden Ball is a subjective media vote with no stat behind it, so it isn't tracked here.</p>
+    </div>
+    <div class="awards-grid">
+      <section class="award-card">
+        <div class="award-head"><span class="medal">🥇</span><h3>Golden Boot</h3><span class="award-tag">Top scorers</span></div>
+        <p class="award-sub">Goals across all matches played</p>
+        <ol class="board">${bootRows}</ol>
+      </section>
+      <section class="award-card">
+        <div class="award-head"><span class="medal">🧤</span><h3>Clean Sheets</h3><span class="award-tag">Glove proxy</span></div>
+        <p class="award-sub">Matches a team conceded zero</p>
+        <ol class="board">${gloveRows}</ol>
+      </section>
+    </div>`;
+}
+
+function switchView(view) {
+  state.view = view;
+  document.querySelectorAll('.viewtab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  document.getElementById('view-schedule').hidden = view !== 'schedule';
+  document.getElementById('view-awards').hidden = view !== 'awards';
+  if (view === 'awards') renderAwards();
+  window.scrollTo(0, 0);
+}
+
 // ---- Live scores (ESPN unofficial API, keyless) -------------------------
 // When "Live" is on, poll ESPN's public scoreboard and OVERWRITE listed
 // scores for any in-progress or finished game whose teams + date match.
@@ -1813,6 +2009,7 @@ const LIVE = (() => {
     }));
     if (touched) writeCache(cache);
     render(); renderNow();
+    if (typeof renderAwards === 'function') renderAwards();
   }
 
   function restoreOriginal() {
@@ -1865,6 +2062,9 @@ const LIVE = (() => {
 })();
 
 // Wire up
+document.querySelectorAll('.viewtab').forEach(tab => {
+  tab.addEventListener('click', () => switchView(tab.dataset.view));
+});
 document.querySelectorAll('.filter-chip').forEach(chip => {
   chip.addEventListener('click', () => {
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
