@@ -546,6 +546,23 @@
   }
   .match:hover { background: var(--bg-2); }
   .match:last-child { border-bottom: none; }
+  .match-events {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    padding: 4px 4px 0 92px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .me-line { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+  .me-ico { font-size: 12px; margin-right: 2px; }
+  .me-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .me-min { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-mute); }
+  .me-card { width: 9px; height: 12px; border-radius: 2px; display: inline-block; flex: none; }
+  .me-card.yellow { background: #eab308; }
+  .me-card.red { background: #dc2626; }
   .match-time {
     font-family: 'JetBrains Mono', monospace;
     font-size: 14px;
@@ -1501,7 +1518,26 @@ function render() {
         const chCls = m.ch === 'FOX' ? 'channel-fox' : 'channel-fs1';
         const starred = state.starred.has(m.i);
         const completedCls = isPast ? ' completed' : '';
- 
+
+        // Goal scorers and cards (populated by live mode)
+        let eventsHtml = '';
+        if (m.events && m.events.length) {
+          const goals = m.events.filter(e => e.kind === 'goal');
+          const cards = m.events.filter(e => e.kind !== 'goal');
+          let parts = '';
+          if (goals.length) {
+            parts += `<span class="me-line"><span class="me-ico">⚽</span>` +
+              goals.map(g => `<span class="me-item">${teamFlag(g.team)}<span class="me-min">${g.minute}</span> ${g.player}${g.pen ? ' (P)' : ''}${g.og ? ' (OG)' : ''}</span>`).join('') +
+              `</span>`;
+          }
+          if (cards.length) {
+            parts += `<span class="me-line">` +
+              cards.map(c => `<span class="me-item"><span class="me-card ${c.kind}"></span>${teamFlag(c.team)}<span class="me-min">${c.minute}</span> ${c.player}</span>`).join('') +
+              `</span>`;
+          }
+          eventsHtml = `<div class="match-events">${parts}</div>`;
+        }
+
         html += `<div class="match${completedCls}">
           <div class="match-time">${time}${dayShift}</div>
           <div class="match-badge ${badgeCls}">${m.badge}</div>
@@ -1516,6 +1552,7 @@ function render() {
             </div>
           </div>
           <button class="icon-action star-btn ${starred ? 'starred' : ''}" data-idx="${m.i}" aria-label="Star match">${starred ? '★' : '☆'}</button>
+          ${eventsHtml}
         </div>`;
       });
       html += '</div>';
@@ -1640,6 +1677,21 @@ const LIVE = (() => {
     } else if (s0 !== s1) {
       m.note = undefined;                            // overwrite: drop any stale note
     }
+    // Goals and cards. ESPN credits own goals to the benefiting team via team.id.
+    const teamName = id => (c0.id != null && String(c0.id) === id) ? m.teams[0]
+                         : (c1.id != null && String(c1.id) === id) ? m.teams[1] : '';
+    const evs = [];
+    (comp.details || []).forEach(d => {
+      const label = (d.type && d.type.text) || '';
+      if (/shootout/i.test(label)) return;           // skip penalty-shootout attempts
+      const minute = (d.clock && d.clock.displayValue) || '';
+      const player = (d.athletesInvolved && d.athletesInvolved[0] && d.athletesInvolved[0].displayName) || '';
+      const team = teamName(d.team && d.team.id != null ? String(d.team.id) : '');
+      if (d.scoringPlay) evs.push({ kind: 'goal', team, player, minute, pen: !!d.penaltyKick, og: !!d.ownGoal });
+      else if (d.redCard) evs.push({ kind: 'red', team, player, minute });
+      else if (d.yellowCard) evs.push({ kind: 'yellow', team, player, minute });
+    });
+    if (evs.length) m.events = evs; else delete m.events;
     return true;
   }
 
@@ -1669,7 +1721,7 @@ const LIVE = (() => {
   function restoreOriginal() {
     matches.forEach(m => {
       const o = ORIGINAL[m.i];
-      m.score = o.score; m.note = o.note; delete m.live;
+      m.score = o.score; m.note = o.note; delete m.live; delete m.events;
     });
     applyBracket(); render(); renderNow();
   }
