@@ -550,19 +550,40 @@
     grid-column: 1 / -1;
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 18px;
-    padding: 4px 4px 0 92px;
+    align-items: flex-start;
+    gap: 6px 40px;
+    margin-top: 6px;
+    padding: 8px 40px 4px 92px;
+    border-top: 1px dashed var(--line-soft);
     font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
-    color: var(--ink-soft);
+    font-size: 12.5px;
   }
-  .me-line { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
-  .me-ico { font-size: 12px; margin-right: 2px; }
-  .me-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-  .me-min { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-mute); }
-  .me-card { width: 9px; height: 12px; border-radius: 2px; display: inline-block; flex: none; }
+  .me-col { flex: 1 1 0; min-width: 130px; display: flex; flex-direction: column; gap: 4px; }
+  .me-col.home { align-items: flex-end; text-align: right; }
+  .me-col.away { align-items: flex-start; text-align: left; }
+  .me-row { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+  .me-col.home .me-row { flex-direction: row-reverse; }
+  .me-ico { font-size: 11px; line-height: 1; }
+  .me-name { color: var(--ink); font-weight: 500; }
+  .me-min {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-mute);
+    min-width: 30px;
+  }
+  .me-col.home .me-min { text-align: left; }
+  .me-card { width: 9px; height: 12px; border-radius: 2px; display: inline-block; flex: none; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
   .me-card.yellow { background: #eab308; }
   .me-card.red { background: #dc2626; }
+  .me-pens {
+    flex-basis: 100%;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    color: var(--ink-mute);
+    padding-top: 2px;
+  }
   .match-time {
     font-family: 'JetBrains Mono', monospace;
     font-size: 14px;
@@ -658,9 +679,9 @@
   .star-btn.starred { color: var(--star); }
   .star-btn.starred:hover { color: var(--star); }
  
-  /* Completed-state styling */
-  .match.completed { opacity: 0.55; }
-  .match.completed:hover { opacity: 0.85; background: var(--bg-2); }
+  /* Completed-state styling — dim the schedule row but keep scorers readable */
+  .match.completed > *:not(.match-events) { opacity: 0.55; transition: opacity 0.12s; }
+  .match.completed:hover > *:not(.match-events) { opacity: 0.9; }
   .match.completed .match-teams { font-weight: 500; }
   .match-score {
     display: inline-flex;
@@ -1519,23 +1540,25 @@ function render() {
         const starred = state.starred.has(m.i);
         const completedCls = isPast ? ' completed' : '';
 
-        // Goal scorers and cards (populated by live mode)
+        // Goal scorers, cards and penalties — laid out under each team.
         let eventsHtml = '';
-        if (m.events && m.events.length) {
-          const goals = m.events.filter(e => e.kind === 'goal');
-          const cards = m.events.filter(e => e.kind !== 'goal');
-          let parts = '';
-          if (goals.length) {
-            parts += `<span class="me-line"><span class="me-ico">⚽</span>` +
-              goals.map(g => `<span class="me-item">${teamFlag(g.team)}<span class="me-min">${g.minute}</span> ${g.player}${g.pen ? ' (P)' : ''}${g.og ? ' (OG)' : ''}</span>`).join('') +
-              `</span>`;
-          }
-          if (cards.length) {
-            parts += `<span class="me-line">` +
-              cards.map(c => `<span class="me-item"><span class="me-card ${c.kind}"></span>${teamFlag(c.team)}<span class="me-min">${c.minute}</span> ${c.player}</span>`).join('') +
-              `</span>`;
-          }
-          eventsHtml = `<div class="match-events">${parts}</div>`;
+        if ((m.events && m.events.length) || m.pens) {
+          const evList = m.events || [];
+          const rowFor = e => {
+            const min = `<span class="me-min">${e.minute}</span>`;
+            if (e.kind === 'goal') {
+              const mk = (e.pen ? ' (P)' : '') + (e.og ? ' (OG)' : '');
+              return `<span class="me-row"><span class="me-ico">⚽</span><span class="me-name">${e.player}${mk}</span>${min}</span>`;
+            }
+            return `<span class="me-row"><span class="me-card ${e.kind}"></span><span class="me-name">${e.player}</span>${min}</span>`;
+          };
+          const colFor = side => {
+            const rows = evList.filter(e => e.team === m.teams[side]).map(rowFor).join('');
+            return `<div class="me-col ${side === 0 ? 'home' : 'away'}">${rows}</div>`;
+          };
+          const pensHtml = m.pens
+            ? `<div class="me-pens">Penalties · ${teamFlag(m.pens.win)} ${m.pens.win} won ${m.pens.hi}\u2013${m.pens.lo}</div>` : '';
+          eventsHtml = `<div class="match-events">${colFor(0)}${colFor(1)}${pensHtml}</div>`;
         }
 
         html += `<div class="match${completedCls}">
@@ -1594,6 +1617,7 @@ const LIVE = (() => {
   const ENDPOINT = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=';
   const REFRESH_MS = 30000;
   const KEY = 'wc2026_live';
+  const CACHE_KEY = 'wc2026_events_v1';           // cached goals/cards/PKs per date
   let timer = null, lastUpdated = null, lastError = false;
 
   // Snapshot hard-coded scores so we can restore them when live mode is off.
@@ -1637,6 +1661,18 @@ const LIVE = (() => {
     return [...keys];
   }
 
+  // Every ET date that has at least one match already kicked off — used to
+  // load goals/cards/PKs for all played games, not just the live ones.
+  function startedDateKeys() {
+    const now = Date.now();
+    const keys = new Set();
+    matches.forEach(m => {
+      if (m.teams.length !== 2) return;
+      if (new Date(m.iso).getTime() <= now + 3 * 3600e3) keys.add(etDateKey(new Date(m.iso)));
+    });
+    return [...keys];
+  }
+
   function nameOf(c) {
     return (c.team && (c.team.displayName || c.team.name || c.team.shortDisplayName || c.team.location)) || '';
   }
@@ -1651,48 +1687,64 @@ const LIVE = (() => {
     });
   }
 
-  function applyEvent(ev) {
+  // Goals and cards from ESPN details. Own goals are credited to the
+  // benefiting team via team.id, while naming the player who scored them.
+  function parseDetails(comp, m, c0, c1) {
+    const teamName = id => (c0.id != null && String(c0.id) === id) ? m.teams[0]
+                         : (c1.id != null && String(c1.id) === id) ? m.teams[1] : '';
+    const evs = [];
+    (comp.details || []).forEach(d => {
+      if (d.shootout) return;                        // skip penalty-shootout kicks (summarized as PKs)
+      const minute = (d.clock && d.clock.displayValue) || '';
+      const player = (d.athletesInvolved && d.athletesInvolved[0] && d.athletesInvolved[0].displayName) || '';
+      const team = teamName(d.team && d.team.id != null ? String(d.team.id) : '');
+      if (d.scoringPlay) evs.push({ kind: 'goal', team, player, minute, pen: !!d.penaltyKick, og: !!d.ownGoal });
+      else if (player && d.redCard) evs.push({ kind: 'red', team, player, minute });
+      else if (player && d.yellowCard) evs.push({ kind: 'yellow', team, player, minute });
+    });
+    return evs;
+  }
+
+  // Parse one ESPN event. Always attaches goals/cards/PKs to the match.
+  // When liveOn, also overwrites the score, live badge, and PK note.
+  // Returns { m, state, events, pens } or null when it doesn't map to a match.
+  function applyEvent(ev, liveOn) {
     const comp = ev.competitions && ev.competitions[0];
-    if (!comp || !comp.competitors || comp.competitors.length !== 2) return false;
+    if (!comp || !comp.competitors || comp.competitors.length !== 2) return null;
     const cs = comp.competitors;
     const m = findMatch(cs.map(nameOf), etDateKey(new Date(ev.date)));
-    if (!m) return false;
+    if (!m) return null;
     const st = (ev.status && ev.status.type) || {};
     const state = st.state || 'pre';                 // pre | in | post
-    if (state === 'pre') return false;               // nothing to overwrite yet
+    if (state === 'pre') return null;                // no result yet
     // Align ESPN competitors to the site's team order.
     const key0 = canon(m.teams[0]);
     const c0 = cs.find(c => canon(nameOf(c)) === key0) || cs[0];
     const c1 = cs.find(c => c !== c0) || cs[1];
     const s0 = parseInt(c0.score, 10), s1 = parseInt(c1.score, 10);
-    if (isNaN(s0) || isNaN(s1)) return false;
-    m.score = s0 + '-' + s1;
-    m.live = { state, detail: st.shortDetail || st.detail || (state === 'in' ? 'LIVE' : 'FT') };
-    // Penalty shootout on a level knockout tie.
-    const p0 = c0.shootoutScore != null ? parseInt(c0.shootoutScore, 10) : null;
-    const p1 = c1.shootoutScore != null ? parseInt(c1.shootoutScore, 10) : null;
-    if (s0 === s1 && p0 != null && p1 != null && p0 !== p1) {
-      const win = p0 > p1 ? m.teams[0] : m.teams[1];
-      m.note = win + ' adv. ' + Math.max(p0, p1) + '\u2013' + Math.min(p0, p1) + ' pens';
-    } else if (s0 !== s1) {
-      m.note = undefined;                            // overwrite: drop any stale note
+    if (isNaN(s0) || isNaN(s1)) return null;
+
+    // Goals and cards (always shown, for every played game).
+    const events = parseDetails(comp, m, c0, c1);
+    if (events.length) m.events = events; else delete m.events;
+
+    // Penalty shootout on a level knockout tie (always).
+    const q0 = c0.shootoutScore != null ? parseInt(c0.shootoutScore, 10) : null;
+    const q1 = c1.shootoutScore != null ? parseInt(c1.shootoutScore, 10) : null;
+    let pens = null;
+    if (s0 === s1 && q0 != null && q1 != null && q0 !== q1) {
+      pens = { win: q0 > q1 ? m.teams[0] : m.teams[1], hi: Math.max(q0, q1), lo: Math.min(q0, q1) };
+      m.pens = pens;
+    } else delete m.pens;
+
+    // Score + live badge overwrite only while live mode is on.
+    if (liveOn) {
+      m.score = s0 + '-' + s1;
+      m.live = { state, detail: st.shortDetail || st.detail || (state === 'in' ? 'LIVE' : 'FT') };
+      if (pens) m.note = pens.win + ' adv. ' + pens.hi + '\u2013' + pens.lo + ' pens';
+      else if (s0 !== s1) m.note = undefined;         // overwrite: drop any stale note
     }
-    // Goals and cards. ESPN credits own goals to the benefiting team via team.id.
-    const teamName = id => (c0.id != null && String(c0.id) === id) ? m.teams[0]
-                         : (c1.id != null && String(c1.id) === id) ? m.teams[1] : '';
-    const evs = [];
-    (comp.details || []).forEach(d => {
-      const label = (d.type && d.type.text) || '';
-      if (/shootout/i.test(label)) return;           // skip penalty-shootout attempts
-      const minute = (d.clock && d.clock.displayValue) || '';
-      const player = (d.athletesInvolved && d.athletesInvolved[0] && d.athletesInvolved[0].displayName) || '';
-      const team = teamName(d.team && d.team.id != null ? String(d.team.id) : '');
-      if (d.scoringPlay) evs.push({ kind: 'goal', team, player, minute, pen: !!d.penaltyKick, og: !!d.ownGoal });
-      else if (d.redCard) evs.push({ kind: 'red', team, player, minute });
-      else if (d.yellowCard) evs.push({ kind: 'yellow', team, player, minute });
-    });
-    if (evs.length) m.events = evs; else delete m.events;
-    return true;
+    return { m, state, events, pens };
   }
 
   async function fetchDate(key) {
@@ -1706,7 +1758,7 @@ const LIVE = (() => {
     try {
       const results = await Promise.all(datesToQuery().map(k => fetchDate(k).catch(() => null)));
       let changed = false;
-      results.forEach(j => { if (j && j.events) j.events.forEach(ev => { if (applyEvent(ev)) changed = true; }); });
+      results.forEach(j => { if (j && j.events) j.events.forEach(ev => { if (applyEvent(ev, true)) changed = true; }); });
       lastError = false;
       lastUpdated = new Date();
       applyBracket();
@@ -1718,10 +1770,57 @@ const LIVE = (() => {
     }
   }
 
+  // ---- Results enrichment (always on) -------------------------------------
+  // Load goals/cards/PKs for EVERY played game, regardless of the Live toggle.
+  // Finished dates are cached in localStorage so we don't refetch them.
+  function readCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch (e) { return {}; } }
+  function writeCache(c) { try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch (e) {} }
+
+  function applyCachedDate(entry) {
+    Object.keys(entry.res || {}).forEach(i => {
+      const m = matches[+i]; if (!m) return;
+      const r = entry.res[i];
+      if (r.events && r.events.length) m.events = r.events; else delete m.events;
+      if (r.pens) m.pens = r.pens; else delete m.pens;
+    });
+  }
+
+  async function loadDate(key) {
+    const j = await fetchDate(key);
+    const res = {};
+    let done = true;
+    (j.events || []).forEach(ev => {
+      const state = ((ev.status && ev.status.type) || {}).state || 'pre';
+      if (state !== 'post') done = false;
+      const r = applyEvent(ev, false);
+      if (r) res[r.m.i] = { events: r.events || [], pens: r.pens || null };
+    });
+    return { done, res };
+  }
+
+  async function loadResults() {
+    const cache = readCache();
+    let touched = false;
+    await Promise.all(startedDateKeys().map(async key => {
+      const cached = cache[key];
+      if (cached && cached.done) { applyCachedDate(cached); return; }
+      try {
+        cache[key] = await loadDate(key);
+        touched = true;
+      } catch (e) {
+        if (cached) applyCachedDate(cached);
+      }
+    }));
+    if (touched) writeCache(cache);
+    render(); renderNow();
+  }
+
   function restoreOriginal() {
+    // Turning live off restores hard-coded scores but keeps the goals/cards
+    // and PK info, which are shown for every game independent of live mode.
     matches.forEach(m => {
       const o = ORIGINAL[m.i];
-      m.score = o.score; m.note = o.note; delete m.live; delete m.events;
+      m.score = o.score; m.note = o.note; delete m.live;
     });
     applyBracket(); render(); renderNow();
   }
@@ -1758,6 +1857,7 @@ const LIVE = (() => {
     const btn = document.getElementById('liveToggle');
     if (btn) btn.addEventListener('click', () => setOn(!isOn()));
     paintToggle(); paintStatus();
+    loadResults();                                   // goals/cards/PKs for all played games
     if (isOn()) { start(); refresh(); }
   }
 
