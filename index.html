@@ -185,6 +185,11 @@
     margin: 24px auto 0;
     padding: 0 24px;
   }
+  .now-inner + .now-inner { margin-top: 14px; }
+  .now-inner.now-next {
+    background: linear-gradient(135deg, #1c2620, #232f28);
+  }
+  .now-inner.now-next .now-title { font-size: clamp(22px, 4vw, 32px); }
   .now-inner {
     background: linear-gradient(135deg, var(--pitch-deep), var(--pitch));
     color: #f3eee2;
@@ -731,6 +736,8 @@
     background: var(--accent);
   }
   .section-header.past .sh-dot { background: var(--ink-mute); }
+  .section-header.live { color: #d24a3a; }
+  .section-header .sh-dot.live { background: #ff5a4a; animation: pulse 1.5s infinite; }
   .section-header .sh-count {
     margin-left: auto;
     font-size: 10px;
@@ -1436,79 +1443,99 @@ function saveStarred() {
 }
  
 // Countdown / next match
+// Classify a match relative to `now`: 'upcoming' | 'live' | 'done'.
+// A game stays 'live' from kickoff until it reports a final result or the
+// assumed play window elapses — so it is NOT moved to Completed the instant
+// kickoff passes. Live data (m.live.state) is authoritative when present.
+const LIVE_WINDOW_MS = 2.75 * 3600 * 1000;   // regulation + ET + pens + breaks
+function matchPhase(m, now) {
+  const t = now instanceof Date ? now.getTime() : now;
+  if (m.live && m.live.state === 'post') return 'done';
+  if (m.live && m.live.state === 'in') return 'live';
+  const start = new Date(m.iso).getTime();
+  if (t < start) return 'upcoming';
+  if (t - start < LIVE_WINDOW_MS && !m.score) return 'live';
+  return 'done';
+}
+
 function renderNow() {
   const card = document.getElementById('nowCard');
   const now = new Date();
   const tz = resolvedTz();
- 
-  // Find current live match (kicked off within last 2.5h, no score yet) or next match
+
+  // The soonest-started live game and the next upcoming game (shown together).
   let live = null, next = null;
   for (const m of matches) {
-    if (m.score) continue;  // already played, skip
-    const start = new Date(m.iso);
-    const elapsedMs = now - start;
-    if (elapsedMs >= 0 && elapsedMs < 2.5 * 3600 * 1000) {
-      if (!live) live = m;
-    } else if (start > now) {
-      if (!next || start < new Date(next.iso)) next = m;
+    const phase = matchPhase(m, now);
+    if (phase === 'live') {
+      if (!live || new Date(m.iso) < new Date(live.iso)) live = m;
+    } else if (phase === 'upcoming') {
+      if (!next || new Date(m.iso) < new Date(next.iso)) next = m;
     }
   }
- 
-  const target = live || next;
-  if (!target) { card.innerHTML = ''; return; }
- 
-  const targetDate = new Date(target.iso);
-  const dayParts = getDayParts(targetDate, tz);
-  const timeStr = getTimeStr(targetDate, tz);
-  const teamsStr = target.teams.length === 2
-    ? `${teamFlag(target.teams[0])} ${target.teams[0]} vs ${target.teams[1]} ${teamFlag(target.teams[1])}`.trim()
-    : target.teams[0];
- 
-  if (live) {
-    card.innerHTML = `<div class="now-inner">
-      <div class="now-label live"><span class="live-dot"></span>Live now</div>
-      <div class="now-title">${teamsStr}</div>
+  if (!live && !next) { card.innerHTML = ''; return; }
+
+  const teamsOf = t => t.teams.length === 2
+    ? `${teamFlag(t.teams[0])} ${t.teams[0]} vs ${t.teams[1]} ${teamFlag(t.teams[1])}`.trim()
+    : t.teams[0];
+
+  function liveBlock(m) {
+    const timeStr = getTimeStr(new Date(m.iso), tz);
+    const detail = (m.live && m.live.detail) ? m.live.detail : 'In progress';
+    const scoreLine = m.score ? `<span>Score · <strong>${m.score.replace('-', '\u2013')}</strong></span>` : '';
+    return `<div class="now-inner now-live">
+      <div class="now-label live"><span class="live-dot"></span>Live now · ${detail}</div>
+      <div class="now-title">${teamsOf(m)}</div>
       <div class="now-meta">
-        <span>${target.venue}</span>
+        <span>${m.venue}</span>
         <span>Kicked off · <strong>${timeStr}</strong></span>
-        <span>English: <strong>${target.ch}</strong> · Spanish: <strong>Telemundo</strong></span>
+        ${scoreLine}
+        <span>English: <strong>${m.ch}</strong> · Spanish: <strong>Telemundo</strong></span>
       </div>
     </div>`;
-    return;
   }
- 
-  // Countdown
-  const ms = targetDate - now;
-  const days = Math.floor(ms / 86400000);
-  const hours = Math.floor((ms % 86400000) / 3600000);
-  const mins = Math.floor((ms % 3600000) / 60000);
-  const secs = Math.floor((ms % 60000) / 1000);
- 
-  card.innerHTML = `<div class="now-inner">
-    <div class="now-label">Next match · ${dayParts.weekday} ${dayParts.day} ${dayParts.month} · ${timeStr}</div>
-    <div class="now-title">${teamsStr}</div>
-    <div class="now-meta">
-      <span>${target.venue}</span>
-      <span>English: <strong>${target.ch}</strong></span>
-      <span>Spanish: <strong>Telemundo · Peacock</strong></span>
-    </div>
-    <div class="countdown">
-      <div class="cd-unit"><div class="cd-num">${days}</div><div class="cd-lbl">Days</div></div>
-      <div class="cd-unit"><div class="cd-num">${pad(hours)}</div><div class="cd-lbl">Hours</div></div>
-      <div class="cd-unit"><div class="cd-num">${pad(mins)}</div><div class="cd-lbl">Min</div></div>
-      <div class="cd-unit"><div class="cd-num">${pad(secs)}</div><div class="cd-lbl">Sec</div></div>
-    </div>
-    <div class="now-actions">
-      <div class="cal-wrap">
-        <button class="now-btn" onclick="toggleCalMenu(this)">📅 Add to calendar</button>
-        <div class="cal-popover in-card">
-          <button onclick="openGCal(${target.i}, event)"><span class="ci">G</span><span class="cl">Google Calendar<span class="csub">Opens in a new tab</span></span></button>
-          <button onclick="downloadOne(${target.i}, event)"><span class="ci">⬇</span><span class="cl">Download .ics<span class="csub">Apple, Outlook, others</span></span></button>
-        </div>
+
+  function nextBlock(m, secondary) {
+    const d = new Date(m.iso);
+    const dayParts = getDayParts(d, tz);
+    const timeStr = getTimeStr(d, tz);
+    const ms = d - now;
+    const days = Math.floor(ms / 86400000);
+    const hours = Math.floor((ms % 86400000) / 3600000);
+    const mins = Math.floor((ms % 3600000) / 60000);
+    const secs = Math.floor((ms % 60000) / 1000);
+    const label = secondary ? 'Next up' : 'Next match';
+    return `<div class="now-inner${secondary ? ' now-next' : ''}">
+      <div class="now-label">${label} · ${dayParts.weekday} ${dayParts.day} ${dayParts.month} · ${timeStr}</div>
+      <div class="now-title">${teamsOf(m)}</div>
+      <div class="now-meta">
+        <span>${m.venue}</span>
+        <span>English: <strong>${m.ch}</strong></span>
+        <span>Spanish: <strong>Telemundo · Peacock</strong></span>
       </div>
-      <button class="now-btn" onclick="starNext(${target.i})">${state.starred.has(target.i) ? '★ Starred' : '☆ Star this'}</button>
-    </div>
-  </div>`;
+      <div class="countdown">
+        <div class="cd-unit"><div class="cd-num">${days}</div><div class="cd-lbl">Days</div></div>
+        <div class="cd-unit"><div class="cd-num">${pad(hours)}</div><div class="cd-lbl">Hours</div></div>
+        <div class="cd-unit"><div class="cd-num">${pad(mins)}</div><div class="cd-lbl">Min</div></div>
+        <div class="cd-unit"><div class="cd-num">${pad(secs)}</div><div class="cd-lbl">Sec</div></div>
+      </div>
+      <div class="now-actions">
+        <div class="cal-wrap">
+          <button class="now-btn" onclick="toggleCalMenu(this)">📅 Add to calendar</button>
+          <div class="cal-popover in-card">
+            <button onclick="openGCal(${m.i}, event)"><span class="ci">G</span><span class="cl">Google Calendar<span class="csub">Opens in a new tab</span></span></button>
+            <button onclick="downloadOne(${m.i}, event)"><span class="ci">⬇</span><span class="cl">Download .ics<span class="csub">Apple, Outlook, others</span></span></button>
+          </div>
+        </div>
+        <button class="now-btn" onclick="starNext(${m.i})">${state.starred.has(m.i) ? '★ Starred' : '☆ Star this'}</button>
+      </div>
+    </div>`;
+  }
+
+  let html = '';
+  if (live) html += liveBlock(live);
+  if (next) html += nextBlock(next, !!live);
+  card.innerHTML = html;
 }
  
 window.starNext = (idx) => {
@@ -1534,14 +1561,16 @@ function render() {
     return true;
   });
  
-  // Split into upcoming and past based on either having a score (definitively completed)
-  // or kickoff being in the past
+  // Split by live/upcoming/done. A game only counts as "done" once it is actually
+  // finished (final score or the play-window has elapsed) — not the moment kickoff passes.
+  const liveList = [];
   const upcoming = [];
   const past = [];
   filtered.forEach(m => {
-    const start = new Date(m.iso);
-    const completed = m.score || start < now;
-    (completed ? past : upcoming).push(m);
+    const phase = matchPhase(m, now);
+    if (phase === 'live') liveList.push(m);
+    else if (phase === 'upcoming') upcoming.push(m);
+    else past.push(m);
   });
  
   // Group each section by day
@@ -1559,6 +1588,7 @@ function render() {
     return days;
   }
  
+  const liveDays = groupByDay(liveList, true);       // in-progress
   const upcomingDays = groupByDay(upcoming, true);   // soonest first
   const pastDays = groupByDay(past, false);          // most recent first
  
@@ -1609,7 +1639,7 @@ function render() {
         // Build the teams display, with score wedge if we have one
         let teamsHtml;
         const hasScore = !!m.score;
-        const isPast = hasScore || m.date < now;
+        const isPast = matchPhase(m, now) === 'done';
         if (m.teams.length === 2) {
           const [t1, t2] = m.teams;
           const flag1 = teamFlag(t1);
@@ -1680,6 +1710,10 @@ function render() {
   }
  
   let html = '';
+  if (liveDays.length) {
+    html += `<div class="section-header live"><span class="sh-dot live"></span>Live now<span class="sh-count">${liveList.length} match${liveList.length !== 1 ? 'es' : ''}</span></div>`;
+    html += renderDays(liveDays, false);
+  }
   if (upcomingDays.length) {
     html += `<div class="section-header"><span class="sh-dot"></span>Upcoming<span class="sh-count">${upcoming.length} match${upcoming.length !== 1 ? 'es' : ''}</span></div>`;
     html += renderDays(upcomingDays, false);
