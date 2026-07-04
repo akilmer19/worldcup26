@@ -1813,7 +1813,7 @@ const LIVE = (() => {
   const ENDPOINT = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=';
   const REFRESH_MS = 30000;
   const KEY = 'wc2026_live';
-  const CACHE_KEY = 'wc2026_events_v1';           // cached goals/cards/PKs per date
+  const CACHE_KEY = 'wc2026_events_v2';           // cached results (score/note/goals/cards/PKs) per date
   let timer = null, lastUpdated = null, lastError = false;
 
   // Snapshot hard-coded scores so we can restore them when live mode is off.
@@ -1933,12 +1933,17 @@ const LIVE = (() => {
       m.pens = pens;
     } else delete m.pens;
 
-    // Score + live badge overwrite only while live mode is on.
+    // Finished games are authoritative: apply their final score + PK note even
+    // when Live is off, so the bracket can advance on its own. The live badge
+    // and stale-note wiping stay gated to live mode.
     if (liveOn) {
       m.score = s0 + '-' + s1;
       m.live = { state, detail: st.shortDetail || st.detail || (state === 'in' ? 'LIVE' : 'FT') };
       if (pens) m.note = pens.win + ' adv. ' + pens.hi + '\u2013' + pens.lo + ' pens';
       else if (s0 !== s1) m.note = undefined;         // overwrite: drop any stale note
+    } else if (state === 'post') {
+      m.score = s0 + '-' + s1;
+      if (pens) m.note = pens.win + ' adv. ' + pens.hi + '\u2013' + pens.lo + ' pens';
     }
     return { m, state, events, pens };
   }
@@ -1978,6 +1983,8 @@ const LIVE = (() => {
       const r = entry.res[i];
       if (r.events && r.events.length) m.events = r.events; else delete m.events;
       if (r.pens) m.pens = r.pens; else delete m.pens;
+      // Finished games carry an authoritative score/note in the cache.
+      if (r.score) { m.score = r.score; if (r.note != null) m.note = r.note; }
     });
   }
 
@@ -1989,7 +1996,11 @@ const LIVE = (() => {
       const state = ((ev.status && ev.status.type) || {}).state || 'pre';
       if (state !== 'post') done = false;
       const r = applyEvent(ev, false);
-      if (r) res[r.m.i] = { events: r.events || [], pens: r.pens || null };
+      if (r) {
+        const rec = { events: r.events || [], pens: r.pens || null };
+        if (r.state === 'post') { rec.score = r.m.score; rec.note = r.m.note || null; }
+        res[r.m.i] = rec;
+      }
     });
     return { done, res };
   }
@@ -2008,6 +2019,7 @@ const LIVE = (() => {
       }
     }));
     if (touched) writeCache(cache);
+    applyBracket();                                  // advance the bracket on finished results
     render(); renderNow();
     if (typeof renderAwards === 'function') renderAwards();
   }
@@ -2020,6 +2032,7 @@ const LIVE = (() => {
       m.score = o.score; m.note = o.note; delete m.live;
     });
     applyBracket(); render(); renderNow();
+    loadResults();                                   // re-apply authoritative finished results
   }
 
   function isOn() { return localStorage.getItem(KEY) === '1'; }
