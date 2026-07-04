@@ -236,6 +236,18 @@
     line-height: 1;
     letter-spacing: -0.01em;
   }
+  .now-score {
+    display: inline-block;
+    margin: 0 0.28em;
+    padding: 0 0.18em;
+    color: var(--accent);
+    font-size: 1.12em;
+    vertical-align: baseline;
+  }
+  .now-score-sep {
+    color: rgba(243,238,226,0.55);
+    margin: 0 0.12em;
+  }
   .now-meta {
     display: flex;
     gap: 20px;
@@ -1482,14 +1494,22 @@ function renderNow() {
   function liveBlock(m) {
     const timeStr = getTimeStr(new Date(m.iso), tz);
     const detail = (m.live && m.live.detail) ? m.live.detail : 'In progress';
-    const scoreLine = m.score ? `<span>Score · <strong>${m.score.replace('-', '\u2013')}</strong></span>` : '';
+    // Live score sits big in the headline, between the two teams (only set for an
+    // in-progress game when Live is on). Falls back to "vs" before any score.
+    let title;
+    if (m.score && m.teams.length === 2) {
+      const [s1, s2] = m.score.split('-');
+      const [t1, t2] = m.teams;
+      title = `${teamFlag(t1)} ${t1} <span class="now-score">${s1}<span class="now-score-sep">\u2013</span>${s2}</span> ${t2} ${teamFlag(t2)}`.trim();
+    } else {
+      title = teamsOf(m);
+    }
     return `<div class="now-inner now-live">
       <div class="now-label live"><span class="live-dot"></span>Live now · ${detail}</div>
-      <div class="now-title">${teamsOf(m)}</div>
+      <div class="now-title">${title}</div>
       <div class="now-meta">
         <span>${m.venue}</span>
         <span>Kicked off · <strong>${timeStr}</strong></span>
-        ${scoreLine}
         <span>English: <strong>${m.ch}</strong> · Spanish: <strong>Telemundo</strong></span>
       </div>
     </div>`;
