@@ -934,6 +934,13 @@
     display: flex; align-items: baseline; gap: 7px;
   }
   .b-val .b-note { font-weight: 400; font-size: 10.5px; color: var(--ink-mute); }
+  .card-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 18px; padding: 0 5px; border-radius: 4px;
+    font-size: 12px; font-weight: 700; color: #1a1a1a;
+  }
+  .card-chip.yellow { background: #f4c430; }
+  .card-chip.red { background: #e03b2f; color: #fff; }
   .board-empty { color: var(--ink-mute); font-size: 13px; padding: 14px 4px; }
   @media (max-width: 720px) {
     .awards-wrap { padding: 18px 14px 50px; }
@@ -1766,9 +1773,17 @@ function computeAwards() {
   const now = Date.now();
   const scorers = new Map();   // "player||team" -> { player, team, goals, pens }
   const sheets = new Map();    // team -> { team, cs, played, ga }
+  const cards = new Map();     // team -> { team, yellow, red }
+  let totalYellow = 0, totalRed = 0;
   matches.forEach(m => {
     if (m.teams.length !== 2) return;
     (m.events || []).forEach(e => {
+      if ((e.kind === 'yellow' || e.kind === 'red') && e.team) {
+        const rec = cards.get(e.team) || { team: e.team, yellow: 0, red: 0 };
+        if (e.kind === 'yellow') { rec.yellow++; totalYellow++; }
+        else { rec.red++; totalRed++; }
+        cards.set(e.team, rec);
+      }
       if (e.kind !== 'goal' || e.og || !e.player) return;
       const key = e.player + '||' + e.team;
       const rec = scorers.get(key) || { player: e.player, team: e.team, goals: 0, pens: 0 };
@@ -1791,7 +1806,10 @@ function computeAwards() {
     y.goals - x.goals || y.pens - x.pens || x.player.localeCompare(y.player));
   const glove = [...sheets.values()].filter(r => r.cs > 0).sort((x, y) =>
     y.cs - x.cs || x.ga - y.ga || x.played - y.played || x.team.localeCompare(y.team));
-  return { boot, glove };
+  // "Naughty list" — teams ranked by cards (reds weigh heavier), just for fun.
+  const naughty = [...cards.values()].sort((x, y) =>
+    (y.red * 3 + y.yellow) - (x.red * 3 + x.yellow) || y.red - x.red || x.team.localeCompare(y.team));
+  return { boot, glove, naughty, totalYellow, totalRed };
 }
 
 function medalFor(rank) { return rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : ''; }
@@ -1809,7 +1827,7 @@ function rankedRows(rows, valueOf, rowHtml) {
 function renderAwards() {
   const wrap = document.getElementById('awardsWrap');
   if (!wrap) return;
-  const { boot, glove } = computeAwards();
+  const { boot, glove, naughty, totalYellow, totalRed } = computeAwards();
 
   const bootRows = boot.length ? rankedRows(boot, r => r.goals, (r, pos) => {
     const med = medalFor(pos);
@@ -1830,6 +1848,14 @@ function renderAwards() {
     </li>`;
   }) : '<div class="board-empty">No clean sheets yet.</div>';
 
+  const naughtyRows = naughty.length ? rankedRows(naughty, r => r.red * 3 + r.yellow, (r, pos) => {
+    return `<li class="board-row${pos <= 3 ? ' top' : ''}">
+      <span class="b-rank">${pos}</span>
+      <span class="b-main"><span class="b-flag">${teamFlag(r.team)}</span><span class="b-name">${r.team}</span><span class="b-team">${r.yellow} yellow · ${r.red} red</span></span>
+      <span class="b-val"><span class="card-chip yellow">${r.yellow}</span><span class="card-chip red">${r.red}</span></span>
+    </li>`;
+  }) : '<div class="board-empty">A spotless tournament so far — no cards shown.</div>';
+
   wrap.innerHTML = `
     <div class="awards-intro">
       <h2>The Race for the Trophies</h2>
@@ -1845,6 +1871,11 @@ function renderAwards() {
         <div class="award-head"><span class="medal">🧤</span><h3>Clean Sheets</h3><span class="award-tag">Glove proxy</span></div>
         <p class="award-sub">Matches a team conceded zero</p>
         <ol class="board">${gloveRows}</ol>
+      </section>
+      <section class="award-card">
+        <div class="award-head"><span class="medal">🟨</span><h3>Naughty List</h3><span class="award-tag">For fun</span></div>
+        <p class="award-sub">Bookings by team · <strong>${totalYellow}</strong> yellow${totalYellow !== 1 ? 's' : ''} & <strong>${totalRed}</strong> red${totalRed !== 1 ? 's' : ''} tournament-wide</p>
+        <ol class="board">${naughtyRows}</ol>
       </section>
     </div>`;
 }
