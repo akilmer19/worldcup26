@@ -1899,7 +1899,7 @@ const LIVE = (() => {
   const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=';
   const REFRESH_MS = 30000;
   const KEY = 'wc2026_live';
-  const CACHE_KEY = 'wc2026_events_v4';           // cached results (score/note/goals/cards/PKs) per date
+  const CACHE_KEY = 'wc2026_events_v5';           // cached results (score/note/goals/cards/PKs) per date
   let timer = null, lastUpdated = null, lastError = false;
 
   // Snapshot hard-coded scores so we can restore them when live mode is off.
@@ -1934,12 +1934,21 @@ const LIVE = (() => {
     return g('year') + g('month') + g('day');
   }
 
+  // Add a match's ET date plus its neighbours. ESPN buckets a late kickoff on
+  // the prior ET day (e.g. a midnight-ET game files under the day before), so
+  // querying ±1 day guarantees we hit whichever scoreboard ESPN used.
+  function addDateKeys(set, t) {
+    set.add(etDateKey(new Date(t - 24 * 3600e3)));
+    set.add(etDateKey(new Date(t)));
+    set.add(etDateKey(new Date(t + 24 * 3600e3)));
+  }
+
   function datesToQuery() {
     const now = Date.now();
     const keys = new Set([etDateKey(new Date())]);
     matches.forEach(m => {
       const t = new Date(m.iso).getTime();
-      if (t >= now - 12 * 3600e3 && t <= now + 24 * 3600e3) keys.add(etDateKey(new Date(m.iso)));
+      if (t >= now - 12 * 3600e3 && t <= now + 24 * 3600e3) addDateKeys(keys, t);
     });
     return [...keys];
   }
@@ -1951,7 +1960,7 @@ const LIVE = (() => {
     const keys = new Set();
     matches.forEach(m => {
       if (m.teams.length !== 2) return;
-      if (new Date(m.iso).getTime() <= now + 3 * 3600e3) keys.add(etDateKey(new Date(m.iso)));
+      if (new Date(m.iso).getTime() <= now + 3 * 3600e3) addDateKeys(keys, new Date(m.iso).getTime());
     });
     return [...keys];
   }
@@ -1960,13 +1969,15 @@ const LIVE = (() => {
     return (c.team && (c.team.displayName || c.team.name || c.team.shortDisplayName || c.team.location)) || '';
   }
 
-  function findMatch(names, etKey) {
+  function findMatch(names, evDateMs) {
     const a = canon(names[0]), b = canon(names[1]);
     return matches.find(m => {
       if (m.teams.length !== 2) return false;
       const x = canon(m.teams[0]), y = canon(m.teams[1]);
       if (!((x === a && y === b) || (x === b && y === a))) return false;
-      return etDateKey(new Date(m.iso)) === etKey;
+      // Match the right instance by kickoff proximity (±36h) instead of an exact
+      // ET-date string, so a game ESPN filed on the neighbouring day still links.
+      return Math.abs(new Date(m.iso).getTime() - evDateMs) <= 36 * 3600e3;
     });
   }
 
@@ -2034,7 +2045,7 @@ const LIVE = (() => {
     const comp = ev.competitions && ev.competitions[0];
     if (!comp || !comp.competitors || comp.competitors.length !== 2) return null;
     const cs = comp.competitors;
-    const m = findMatch(cs.map(nameOf), etDateKey(new Date(ev.date)));
+    const m = findMatch(cs.map(nameOf), new Date(ev.date).getTime());
     if (!m) return null;
     const st = (ev.status && ev.status.type) || {};
     const state = st.state || 'pre';                 // pre | in | post
