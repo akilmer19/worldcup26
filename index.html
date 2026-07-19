@@ -1899,7 +1899,7 @@ const LIVE = (() => {
   const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=';
   const REFRESH_MS = 30000;
   const KEY = 'wc2026_live';
-  const CACHE_KEY = 'wc2026_events_v3';           // cached results (score/note/goals/cards/PKs) per date
+  const CACHE_KEY = 'wc2026_events_v4';           // cached results (score/note/goals/cards/PKs) per date
   let timer = null, lastUpdated = null, lastError = false;
 
   // Snapshot hard-coded scores so we can restore them when live mode is off.
@@ -1923,6 +1923,7 @@ const LIVE = (() => {
   function canon(name) {
     if (!name) return '';
     const s = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[&\/-]/g, ' ')        // treat &, -, / as separators so "Bosnia-Herzegovina" == "Bosnia & Herzegovina"
       .replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
     return ALIAS[s] || s;
   }
