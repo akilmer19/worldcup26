@@ -1896,9 +1896,10 @@ function switchView(view) {
 // through applyBracket(), so live results flow into later rounds too.
 const LIVE = (() => {
   const ENDPOINT = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=';
+  const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=';
   const REFRESH_MS = 30000;
   const KEY = 'wc2026_live';
-  const CACHE_KEY = 'wc2026_events_v2';           // cached results (score/note/goals/cards/PKs) per date
+  const CACHE_KEY = 'wc2026_events_v3';           // cached results (score/note/goals/cards/PKs) per date
   let timer = null, lastUpdated = null, lastError = false;
 
   // Snapshot hard-coded scores so we can restore them when live mode is off.
@@ -1986,6 +1987,45 @@ const LIVE = (() => {
     return evs;
   }
 
+  // The scoreboard feed often omits per-play details for finished games. The
+  // per-game summary endpoint carries them under keyEvents (goals/cards), so we
+  // parse those the same way, also falling back to type.text when the boolean
+  // flags are absent.
+  function parseKeyEvents(list, m, c0, c1) {
+    const teamName = id => (c0.id != null && String(c0.id) === id) ? m.teams[0]
+                         : (c1.id != null && String(c1.id) === id) ? m.teams[1] : '';
+    const evs = [];
+    (list || []).forEach(d => {
+      if (d.shootout) return;                        // PK-shootout kicks are summarized separately
+      const minute = (d.clock && d.clock.displayValue) || '';
+      const player = (d.athletesInvolved && d.athletesInvolved[0] && d.athletesInvolved[0].displayName) || '';
+      const team = teamName(d.team && d.team.id != null ? String(d.team.id) : '');
+      const txt = ((d.type && d.type.text) || '').toLowerCase();
+      const isGoal = !!d.scoringPlay || txt.includes('goal');
+      const isRed = !!d.redCard || txt.includes('red card');
+      const isYellow = !!d.yellowCard || txt.includes('yellow card');
+      if (isGoal) evs.push({ kind: 'goal', team, player, minute,
+                             pen: !!d.penaltyKick || txt.includes('penalt'),
+                             og: !!d.ownGoal || txt.includes('own goal') });
+      else if (player && isRed) evs.push({ kind: 'red', team, player, minute });
+      else if (player && isYellow) evs.push({ kind: 'yellow', team, player, minute });
+    });
+    return evs;
+  }
+
+  // Pull goals/cards for one finished game from its summary endpoint, aligning
+  // ESPN's competitors to the site's team order the same way applyEvent does.
+  async function summaryEvents(ev, m) {
+    const comp = ev.competitions && ev.competitions[0];
+    const cs = (comp && comp.competitors) || [];
+    if (cs.length !== 2 || !ev.id) return [];
+    const key0 = canon(m.teams[0]);
+    const c0 = cs.find(c => canon(nameOf(c)) === key0) || cs[0];
+    const c1 = cs.find(c => c !== c0) || cs[1];
+    const j = await fetchSummary(ev.id);
+    return parseKeyEvents((j && j.keyEvents) || [], m, c0, c1);
+  }
+
   // Parse one ESPN event. Always attaches goals/cards/PKs to the match.
   // When liveOn, also overwrites the score, live badge, and PK note.
   // Returns { m, state, events, pens } or null when it doesn't map to a match.
@@ -2033,6 +2073,12 @@ const LIVE = (() => {
     return { m, state, events, pens };
   }
 
+  async function fetchSummary(id) {
+    const res = await fetch(SUMMARY + id, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
   async function fetchDate(key) {
     const res = await fetch(ENDPOINT + key, { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2077,16 +2123,25 @@ const LIVE = (() => {
     const j = await fetchDate(key);
     const res = {};
     let done = true;
-    (j.events || []).forEach(ev => {
+    for (const ev of (j.events || [])) {
       const state = ((ev.status && ev.status.type) || {}).state || 'pre';
       if (state !== 'post') done = false;
       const r = applyEvent(ev, false);
-      if (r) {
-        const rec = { events: r.events || [], pens: r.pens || null };
-        if (r.state === 'post') { rec.score = r.m.score; rec.note = r.m.note || null; }
-        res[r.m.i] = rec;
+      if (!r) continue;
+      let events = r.events || [];
+      // Scoreboard commonly ships a finished score with no play details. Fill
+      // the goals/cards from the per-game summary endpoint so every played
+      // game shows its scorers and cards.
+      if (r.state === 'post' && !events.length) {
+        try {
+          const extra = await summaryEvents(ev, r.m);
+          if (extra.length) { events = extra; r.m.events = extra; }
+        } catch (e) { /* summary unavailable — leave the bare score */ }
       }
-    });
+      const rec = { events, pens: r.pens || null };
+      if (r.state === 'post') { rec.score = r.m.score; rec.note = r.m.note || null; }
+      res[r.m.i] = rec;
+    }
     return { done, res };
   }
 
